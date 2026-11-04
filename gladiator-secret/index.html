@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#140c0a">
+<meta name="description" content="Gladiator Secret — Act I. A top-down pit fight. Three lessons, then the Pit Boss.">
+<title>Gladiator Secret</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect fill='%23140c0a' width='16' height='16'/%3E%3Cpath fill='%23e8c070' d='M7 1h2v6h3v2H10v6H6V9H4V7h3z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" data-mode="title" data-fight="0" data-hp="100" data-stam="100" data-ehp="0">
+  <div class="stage">
+    <div class="frame" id="frame">
+      <canvas id="game" width="320" height="180" aria-label="Gladiator Secret arena"></canvas>
+      <div id="hud">
+        <div class="bars">
+          <div class="bar hp" id="hp-bar" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+            <span class="fill" id="hp-fill"></span><b>HP</b>
+          </div>
+          <div class="bar st" id="st-bar" role="meter" aria-label="Stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+            <span class="fill" id="st-fill"></span><b>ST</b>
+          </div>
+        </div>
+        <div id="fight-label">
+          <strong id="fight-name">Fight I</strong>
+          <div class="pips" id="pips"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="hud-actions">
+          <button type="button" id="btn-mute" aria-pressed="false">SFX</button>
+          <button type="button" id="btn-pause">Pause</button>
+        </div>
+      </div>
+      <p id="prompt" hidden></p>
+      <div id="banner" hidden>
+        <p id="banner-kicker"></p>
+        <h2 id="banner-title"></h2>
+        <p class="sub" id="banner-sub"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="touch" class="touch-controls" hidden>
+    <div id="joy" class="joy" aria-label="Move joystick"><div id="knob" class="knob"></div></div>
+    <div class="buttons">
+      <button type="button" id="btn-dodge" class="act act-dodge">Dodge</button>
+      <button type="button" id="btn-block" class="act act-block">Block</button>
+      <button type="button" id="btn-attack" class="act act-attack">Attack</button>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <section class="panel" id="panel-title">
+      <p class="eyebrow">Act I · The Pit</p>
+      <h1>Gladiator<br>Secret</h1>
+      <p class="lede">A prisoner. Three fights. Then the gate.</p>
+      <p class="controls-line" id="title-controls"></p>
+      <button type="button" class="primary" id="btn-start">Enter the pit</button>
+      <button type="button" class="secondary" id="btn-mute-title">SFX on</button>
+    </section>
+
+    <section class="panel" id="panel-pause" hidden>
+      <p class="eyebrow">Paused</p>
+      <h2>The pit waits</h2>
+      <p class="controls-line" id="pause-controls"></p>
+      <button type="button" class="primary" id="btn-resume">Resume</button>
+      <button type="button" class="secondary" id="btn-restart">Restart run</button>
+    </section>
+
+    <section class="panel" id="panel-dead" hidden>
+      <p class="eyebrow">Game over</p>
+      <h2>Cut down</h2>
+      <p>The pit keeps what it kills. This run is over. You go back to the first fight with nothing carried over.</p>
+      <div class="stats" id="dead-stats"></div>
+      <button type="button" class="primary" id="btn-again">From the first fight</button>
+      <button type="button" class="secondary" id="btn-dead-title">Title</button>
+    </section>
+
+    <section class="panel" id="panel-free" hidden>
+      <p class="eyebrow">Act I clear</p>
+      <h2>You are free</h2>
+      <p>The gate rises. For a moment, the crowd has nothing to shout.</p>
+      <p>A career waits past this sand — other arenas, a house, a name that sticks. None of that is open yet. This was only the pit.</p>
+      <div class="stats" id="free-stats"></div>
+      <button type="button" class="primary" id="btn-free-again">Fight the pit again</button>
+      <button type="button" class="secondary" id="btn-free-title">Title</button>
+    </section>
+  </div>
+</div>
+<div id="sr" class="sr-only" aria-live="polite"></div>
+<script src="sprites.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
