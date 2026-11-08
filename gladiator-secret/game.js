@@ -606,7 +606,7 @@
     hidePrompt();
     if (act === 1) banked += [8, 12, 14, 40][fightIndex] || 0;
     if (act === 2) {
-      const card = window.GS_CAREER.FIGHTS[careerIndex];
+      const card = currentCareerFight();
       showBanner("Down", card ? card.title : "Down", "The street is through the gate.", 1.05);
       announce((card ? card.title : "The fighter") + " defeated.");
     } else if (fightIndex >= FIGHTS.length - 1) {
@@ -1255,14 +1255,19 @@
   }
 
   /* ---------- lessons / flow ---------- */
+  function currentCareerFight() {
+    if (!run || !run.currentId || !window.GS_CAREER) return null;
+    return window.GS_CAREER.fightById(run.currentId);
+  }
+
   function currentCard() {
-    if (act === 2) return window.GS_CAREER.FIGHTS[careerIndex] || window.GS_CAREER.FIGHTS[0];
+    if (act === 2) return currentCareerFight() || { kicker: "The street", title: "the sand", tip: "" };
     return FIGHTS[fightIndex] || FIGHTS[0];
   }
 
   function lessonId() {
     if (act === 2) {
-      const f = window.GS_CAREER.FIGHTS[careerIndex];
+      const f = currentCareerFight();
       return f && f.tip && lessonI === 0 ? "tip" : null;
     }
     const list = FIGHTS[fightIndex] ? FIGHTS[fightIndex].lessons : [];
@@ -1279,7 +1284,7 @@
     if (mode === "intro") { el.hidden = true; return; }
     el.hidden = false;
     if (id === "tip") {
-      const f = window.GS_CAREER.FIGHTS[careerIndex];
+      const f = currentCareerFight();
       el.textContent = f ? f.tip : "";
       return;
     }
@@ -1336,11 +1341,10 @@
 
   function showOverlay(which) {
     $("overlay").hidden = false;
-    ["title", "pause", "dead", "free", "champion", "hall", "legend"].forEach((name) => {
+    ["title", "pause", "dead", "champion", "hall", "legend"].forEach((name) => {
       $("panel-" + name).hidden = name !== which;
     });
     if (which === "dead") fillStats($("dead-stats"));
-    if (which === "free") fillStats($("free-stats"));
     syncControlsCopy();
   }
 
@@ -1420,6 +1424,7 @@
     hubNear = null;
     prisonerName = window.GS_CAREER.randomName();
     meta = window.GS_CAREER.load();
+    window.GS_CAREER.clearRun();
     player = makePlayer();
     document.body.classList.remove("hub-on");
     $("hub-dock").hidden = true;
@@ -1438,9 +1443,9 @@
     document.body.classList.toggle("hub-on", on);
     $("hub-dock").hidden = !on;
     if (!on || !run) return;
-    run._index = careerIndex;
     syncStreetLook();
-    window.GS_CAREER.paint($("hub-dock"), run, hubSheet);
+    window.GS_CAREER.paint($("hub-dock"), run, hubSheet, meta);
+    window.GS_CAREER.saveRun(run);
   }
 
   function enterCareerFromPit() {
@@ -1469,16 +1474,18 @@
     player.vx = player.vy = 0;
     syncStreetLook();
     hideOverlay();
-    showBanner("You are free", run.name, "The gate is behind you. The city charges rent.", 2.4);
+    showBanner("You are free", run.name, "Two names on the card. You cannot do all of it.", 2.4);
     announce("You are free. The career begins.");
     refreshHub();
     sfx("win");
   }
 
   function beginCareerFight() {
-    const f = window.GS_CAREER.FIGHTS[careerIndex];
+    const f = currentCareerFight();
     if (!f || !run) return;
-    const paid = !!(run.heatPending && f.kind !== "varro" && f.kind !== "aelia");
+    window.GS_CAREER.saveRun(run);
+    const paid = !!(run.heatPending && f.id !== "varro" && f.id !== "aelia");
+    const oiled = run.oil > 0;
     venue = f.venue;
     partner = null;
     corpses = [];
@@ -1537,21 +1544,21 @@
     hideOverlay();
     const taunt = window.GS_CAREER.taunt(run, f);
     let sub = taunt || f.sub;
-    if (paid) sub = window.GS_CAREER.RIVAL + " paid them. " + f.sub;
+    if (oiled) sub = "Oil on the blade. " + sub;
+    if (paid) sub = window.GS_CAREER.RIVAL + " paid them. " + sub;
     showBanner(f.kicker, f.title, sub, 1.8);
     announce(f.kicker + ". " + f.title + ".");
   }
 
   function concludeCareerFight() {
-    const f = window.GS_CAREER.FIGHTS[careerIndex];
+    const f = currentCareerFight();
+    if (!f) return;
     const result = window.GS_CAREER.onWin(run, f, player.hp, player.hpMax);
     syncStreetLook();
     if (f.final) {
       finishChampion();
       return;
     }
-    careerIndex += 1;
-    run._index = careerIndex;
     enemy = null;
     partner = null;
     corpses = [];
@@ -1564,7 +1571,7 @@
     player.action = "none";
     player.alive = true;
     run.note = result.note;
-    showBanner("Purse", f.title, result.note, 1.8);
+    showBanner("Purse +" + result.purse, f.title, run.hp + " health left on you.", 1.8);
     refreshHub();
   }
 
@@ -1577,6 +1584,7 @@
       fame: run.fame,
     });
     meta = window.GS_CAREER.load();
+    window.GS_CAREER.clearRun();
     mode = "champion";
     leaveHubChrome();
     showOverlay("champion");
@@ -1613,6 +1621,7 @@
       fame: run ? run.fame : 0,
     });
     meta = window.GS_CAREER.load();
+    window.GS_CAREER.clearRun();
     mode = "dead";
     leaveHubChrome();
     showOverlay("dead");
@@ -1658,7 +1667,47 @@
       if (owned) bits.push(owned + " unlock" + (owned === 1 ? "" : "s") + " carried into the pit");
       line.textContent = bits.join(". ") + ".";
     }
+    const saved = window.GS_CAREER.loadRun();
+    const resumeBtn = $("btn-resume-career");
+    const saveLine = $("title-save");
+    if (resumeBtn) {
+      resumeBtn.hidden = !saved;
+      resumeBtn.textContent = saved ? "Resume " + saved.name : "Resume career";
+    }
+    if (saveLine) {
+      saveLine.hidden = !saved;
+      saveLine.textContent = saved
+        ? "A career is still on the street. Enter the pit starts a new prisoner and leaves that one behind."
+        : "";
+    }
     announce("Gladiator Secret. A prisoner, then a career, if the gate opens.");
+  }
+
+  function resumeCareer() {
+    const saved = window.GS_CAREER.loadRun();
+    if (!saved) return;
+    stats = { dealt: 0, taken: 0, perfects: 0, cleared: saved.wins || 0 };
+    act = 2;
+    run = saved;
+    careerIndex = 0;
+    banked = 0;
+    partner = null;
+    corpses = [];
+    venue = "street";
+    hubSheet = "gate";
+    hubNear = null;
+    prisonerName = saved.name;
+    meta = window.GS_CAREER.load();
+    player = makePlayer();
+    player.x = 160;
+    player.y = 96;
+    enemy = null;
+    mode = "hub";
+    syncStreetLook();
+    hideOverlay();
+    showBanner("The street", run.name, run.days + (run.days === 1 ? " day" : " days") + " before the gate.", 1.6);
+    refreshHub();
+    announce("Career resumed.");
   }
 
   function openCodex(which) {
@@ -2456,6 +2505,8 @@
     }, true);
 
     window.addEventListener("keydown", (e) => {
+      const onHubButton = mode === "hub" && e.target && e.target.closest && e.target.closest("#hub-dock button");
+      if (onHubButton && (e.code === "Space" || e.code === "Enter")) return;
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
       if (e.repeat) {
         key[e.code] = true;
@@ -2561,12 +2612,11 @@
     bindHold($("btn-dodge"), "dodge");
 
     $("btn-start").addEventListener("click", () => { sfx("ui"); startRun(); });
+    $("btn-resume-career").addEventListener("click", () => { sfx("ui"); resumeCareer(); });
     $("btn-resume").addEventListener("click", () => { sfx("ui"); resume(); });
     $("btn-restart").addEventListener("click", () => { sfx("ui"); startRun(); });
     $("btn-again").addEventListener("click", () => { sfx("ui"); startRun(); });
-    $("btn-free-again").addEventListener("click", () => { sfx("ui"); startRun(); });
     $("btn-dead-title").addEventListener("click", () => { sfx("ui"); bootTitle(); });
-    $("btn-free-title").addEventListener("click", () => { sfx("ui"); bootTitle(); });
     $("btn-pause").addEventListener("click", () => { sfx("ui"); pause(); });
     $("hub-dock").addEventListener("click", onHubClick);
     $("btn-hall").addEventListener("click", () => { sfx("ui"); openCodex("hall"); });

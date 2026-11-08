@@ -200,7 +200,7 @@ body.touch canvas { cursor: default; }
   text-align: center;
   pointer-events: none;
   width: max-content;
-  max-width: 70%;
+  max-width: 40%;
   background: rgba(8, 6, 6, 0.9);
   border: 2px solid #6a5344;
   padding: 4px 8px 5px;
@@ -375,6 +375,7 @@ button.primary:active, button.secondary:active { transform: translate(2px, 2px);
   max-height: 46vh;
   overflow: auto;
   z-index: 5;
+  touch-action: pan-y;
 }
 
 #hub-dock[hidden] { display: none !important; }
@@ -438,6 +439,45 @@ button.primary:active, button.secondary:active { transform: translate(2px, 2px);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gold);
+}
+
+.hub-preview {
+  margin: 0 0 8px;
+  color: var(--gold);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-align: left;
+}
+
+.fight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 8px;
+  border: 2px solid #6a5344;
+  background: #1c1410;
+  text-align: left;
+}
+
+.fight-card.booked { border-color: var(--gold); }
+
+.fight-card b {
+  color: var(--gold);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.fight-card span {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fight-card .hub-btn { align-self: flex-start; margin-top: 4px; }
+
+@media (max-width: 640px) {
+  .fight-card .hub-btn { align-self: stretch; min-height: 44px; }
 }
 
 .hall { list-style: none; padding: 0; margin: 8px 0; text-align: left; }

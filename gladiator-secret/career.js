@@ -4,6 +4,8 @@
   "use strict";
 
   const KEY = "gs-legend-v1";
+  const RUN_KEY = "gs-run-v1";
+  const PHYSICIAN = 20;
   const DAYS = 3;
 
   const PRAE = ["Marcus", "Titus", "Gaius", "Quintus", "Servius", "Appius", "Sextus", "Numerius"];
@@ -56,7 +58,7 @@
     { id: "heal", name: "Infirmary", x: 244, y: 24, w: 68, h: 34, label: "HEAL" },
     { id: "home", name: "Your rooms", x: 8, y: 136, w: 72, h: 28, label: "HOME" },
     { id: "court", name: "The court", x: 112, y: 140, w: 68, h: 26, label: "COURT" },
-    { id: "gate", name: "The arena", x: 208, y: 132, w: 100, h: 32, label: "GATE" },
+    { id: "gate", name: "The card", x: 208, y: 132, w: 100, h: 32, label: "GATE" },
   ];
 
   const RIVAL = "Lucius Varro";
@@ -64,67 +66,97 @@
 
   const FIGHTS = [
     {
+      id: "cassia",
       kind: "retiarius",
+      tier: "provincial",
       venue: "provincial",
-      kicker: "Rising name",
+      kicker: "Provincial",
       title: "Cassia the Net",
-      sub: "A provincial card. She fights as if the sand were a conversation.",
+      risk: "Careful",
+      tagline: "Her net slows you if it lands. The purse is the smaller one.",
+      sub: "Wood stands. She fights at a distance.",
       tip: "The yellow lane is her net. If it lands, you slow down. Dodge it. The trident is a cut — block when it flares white.",
-      purse: 28,
+      purse: 32,
     },
     {
+      id: "vitus",
       kind: "murmillo",
+      tier: "provincial",
       venue: "provincial",
-      kicker: "Rising name",
+      kicker: "Provincial",
       title: "Vitus the Shield",
-      sub: "He was trained. The wood of the stands still smells like livestock.",
+      risk: "Mean",
+      tagline: "He breaks a lazy block. The purse is fatter, and so is the hit.",
+      sub: "Wood stands. He was trained.",
       tip: "Dodge the red bash — a held block breaks. Do not swing while his shield is bright. The slow hook is there to be perfect-blocked.",
-      purse: 36,
+      purse: 46,
     },
     {
+      id: "decimus",
       kind: "veteran",
+      tier: "colosseum",
       venue: "colosseum",
-      kicker: "Crowd favorite",
+      kicker: "Colosseum",
       title: "Decimus",
-      sub: "Marble, sunset, and a man who has buried prettier names than yours.",
+      risk: "Trained",
+      tagline: "Marble and a man who has buried prettier names. Two cuts, then a circle.",
+      sub: "Sunset. The cheap seats already know him.",
       tip: "Two quick cuts, then a circle at his feet. Leave the circle. His lunge can be blocked. His guard cannot be hit.",
-      purse: 48,
+      purse: 54,
     },
     {
+      id: "lion",
       kind: "lion",
+      tier: "colosseum",
       venue: "colosseum",
-      kicker: "Crowd favorite",
+      kicker: "Colosseum",
       title: "The Lion",
-      sub: "No speech. The emperor's box leans forward anyway.",
+      risk: "Fast",
+      tagline: "No speech, no shield worth trusting. The purse is good if you live.",
+      sub: "The emperor's box leans forward.",
       tip: "Orange is a pounce. Blocking it is dirty. Rolling is clean. When it spins, leave the circle — one dodge only covers one bite.",
-      purse: 55,
+      purse: 60,
     },
     {
+      id: "brothers",
       kind: "twin",
       duo: true,
+      tier: "colosseum",
       venue: "colosseum",
-      kicker: "Crowd favorite",
+      kicker: "Colosseum",
       title: "The Brothers",
-      sub: "Two of them. They do not share a health bar, or a sense of fairness.",
+      risk: "Two of them",
+      tagline: "Two health bars. The biggest purse on the marble, and the easiest way to die rich.",
+      sub: "They do not share a sense of fairness.",
       tip: "Kill one. The other keeps coming. Jabs are short. The sweep is a circle.",
-      purse: 62,
+      purse: 74,
     },
     {
+      id: "varro",
       kind: "varro",
+      tier: "booked",
+      booked: true,
       venue: "finals",
-      kicker: "The rival",
+      kicker: "Booked",
       title: RIVAL,
-      sub: "He has been winning while you were learning the street.",
+      risk: "The rival",
+      tagline: "He asked for you. A held block invites the rush. His purse grew with every boast.",
+      sub: "He has been winning while you picked your cards.",
       tip: "A held block invites his rush — dodge the lane. A wild flurry invites the shield. The narrow cut is for a perfect block.",
-      purse: 80,
+      purse: 90,
     },
     {
+      id: "aelia",
       kind: "aelia",
+      tier: "booked",
+      booked: true,
       final: true,
       venue: "finals",
-      kicker: "Champion of Rome",
+      kicker: "Booked",
       title: CHAMPION,
-      sub: "The last name on the card. She has not lost it in nine years.",
+      risk: "Champion",
+      tagline: "Nine years unbeaten. Win and the run is over. Lose and the name stays hers.",
+      sub: "The reigning Champion of Rome.",
       tip: "The heavy cut is the second swing, not the third. Spears are lanes. The sun is a circle you walk out of. Do not hit the bright guard.",
       purse: 120,
     },
@@ -365,8 +397,8 @@
   };
 
   const KINDS = {
-    retiarius: { sprite: "retiarius", hp: 100, speed: 42, r: 8, prefer: 50, think: 0.3, weapon: { len: 20, thick: 1, color: "#9aa3b2", edge: "#e8c070" } },
-    murmillo: { sprite: "murmillo", hp: 128, speed: 30, r: 10, prefer: 26, think: 0.34, weapon: { len: 16, thick: 2, color: "#d5dbe6", edge: "#2a3038" } },
+    retiarius: { sprite: "retiarius", hp: 84, speed: 42, r: 8, prefer: 50, think: 0.3, weapon: { len: 20, thick: 1, color: "#9aa3b2", edge: "#e8c070" } },
+    murmillo: { sprite: "murmillo", hp: 116, speed: 30, r: 10, prefer: 26, think: 0.34, weapon: { len: 16, thick: 2, color: "#d5dbe6", edge: "#2a3038" } },
     veteran: { sprite: "veteran", hp: 150, speed: 36, r: 9, prefer: 30, think: 0.24, weapon: { len: 20, thick: 1, color: "#e4e7ee", edge: "#7a1618" } },
     lion: { sprite: "lion", hp: 126, speed: 66, r: 10, prefer: 30, think: 0.16, weapon: null },
     twin: { sprite: "twin", hp: 74, speed: 36, r: 8, prefer: 26, think: 0.26, weapon: { len: 16, thick: 1, color: "#c8d0dc", edge: "#1c2838" } },
@@ -539,7 +571,9 @@
       court: { gallus: false, marcia: false, rufus: false },
       partyTip: 0,
       wins: 0,
-      note: "You are free. Three days before they call your name.",
+      beaten: {},
+      currentId: null,
+      note: "Three days. The gate has more than one name.",
     };
   }
 
@@ -554,8 +588,98 @@
     return "Freedman";
   }
 
-  function nextFight(index) {
-    return FIGHTS[index] || null;
+  function fightById(id) {
+    return FIGHTS.find((f) => f.id === id) || null;
+  }
+
+  function winsOf(run, tier) {
+    return FIGHTS.filter((f) => f.tier === tier && run.beaten && run.beaten[f.id]).length;
+  }
+
+  function unbeaten(run, tier) {
+    return FIGHTS.filter((f) => f.tier === tier && !(run.beaten && run.beaten[f.id]));
+  }
+
+  /* Two or three bouts on the card. The rival and the champion are booked, not next-in-line. */
+  function card(run) {
+    const out = [];
+    const push = (f, extra) => {
+      if (!f || out.some((x) => x.id === f.id)) return;
+      out.push(Object.assign({}, f, extra || {}));
+    };
+    if (!run || (run.beaten && run.beaten.aelia)) return out;
+    if (run.beaten && run.beaten.varro) {
+      push(fightById("aelia"));
+      unbeaten(run, "colosseum").slice(0, 1).forEach((f) => push(f, { risk: "One more purse before her" }));
+      return out;
+    }
+    const provWins = winsOf(run, "provincial");
+    const coloWins = winsOf(run, "colosseum");
+    if (provWins < 2) {
+      unbeaten(run, "provincial").forEach((f) => push(f));
+      if (provWins >= 1 && !(run.beaten && run.beaten.decimus)) push(fightById("decimus"), { risk: "Early marble" });
+      if (out.length < 2) unbeaten(run, "colosseum").forEach((f) => push(f));
+      return out.slice(0, 3);
+    }
+    unbeaten(run, "colosseum").forEach((f) => push(f));
+    if (coloWins >= 2) push(fightById("varro"));
+    return out.slice(0, 3);
+  }
+
+  function normalizeRun(run) {
+    if (!run || typeof run.name !== "string") return null;
+    run.beaten = run.beaten && typeof run.beaten === "object" ? run.beaten : {};
+    run.court = run.court || { gallus: false, marcia: false, rufus: false };
+    run.days = run.days | 0;
+    run.gold = run.gold | 0;
+    run.hp = Math.max(1, run.hp | 0);
+    run.str = run.str | 0;
+    run.spd = run.spd | 0;
+    run.sta = run.sta | 0;
+    run.fame = run.fame | 0;
+    run.fans = run.fans | 0;
+    run.wins = run.wins | 0;
+    run.oil = run.oil | 0;
+    run.rivalHeat = run.rivalHeat | 0;
+    run.partyTip = run.partyTip | 0;
+    run.villa = run.villa | 0;
+    run.day = run.day || 1;
+    run.heatPending = !!run.heatPending;
+    run.deepCut = !!run.deepCut;
+    run.patron = run.patron || null;
+    run.weapon = WEAPONS[run.weapon] ? run.weapon : "gladius";
+    run.armor = ARMORS[run.armor] ? run.armor : "rags";
+    run.cosmetic = LOOKS[run.cosmetic] ? run.cosmetic : "none";
+    run.currentId = null;
+    if (!run.note) run.note = "The gate still has your name.";
+    return run;
+  }
+
+  function saveRun(run) {
+    try {
+      if (!run) {
+        localStorage.removeItem(RUN_KEY);
+        return;
+      }
+      const copy = JSON.parse(JSON.stringify(run));
+      delete copy.currentId;
+      delete copy._index;
+      localStorage.setItem(RUN_KEY, JSON.stringify(copy));
+    } catch (err) { /* private mode */ }
+  }
+
+  function loadRun() {
+    try {
+      const raw = localStorage.getItem(RUN_KEY);
+      if (!raw) return null;
+      return normalizeRun(JSON.parse(raw));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function clearRun() {
+    saveRun(null);
   }
 
   function freshness(run) {
@@ -584,7 +708,9 @@
       const err = pay(run, spec.gold, true);
       if (err) return { ok: false, msg: err };
       run[arg] += 1;
-      return { ok: true, msg: spec.name + " " + run[arg] + ". You will feel it in the next sand." };
+      const mods = combatMods(run, null);
+      const bit = arg === "str" ? (" Next hit is " + mods.dmg + ".") : arg === "spd" ? " Your feet are quicker." : (" Wind is " + mods.stamMax + ".");
+      return { ok: true, msg: spec.name + " " + run[arg] + "." + bit };
     }
     if (action === "weapon" || action === "armor" || action === "cosmetic") {
       const table = action === "weapon" ? WEAPONS : action === "armor" ? ARMORS : LOOKS;
@@ -601,13 +727,13 @@
       if (run.hp >= max && !run.deepCut) return { ok: false, msg: "You are as whole as the bed can make you." };
       const err = pay(run, 0, true);
       if (err) return { ok: false, msg: err };
-      run.hp = Math.min(max, run.hp + 30);
-      return { ok: true, msg: "A day in bed. " + run.hp + " health. " + (run.deepCut ? "The deep cut is still there." : "Nothing torn that sleep won't close.") };
+      run.hp = Math.min(max, run.hp + 32);
+      return { ok: true, msg: "A day in bed. You will walk in at " + run.hp + " health." + (run.deepCut ? " The deep cut is still open." : "") };
     }
     if (action === "physician") {
       const max = hpMax(run);
       if (run.hp >= 100 && !run.deepCut) return { ok: false, msg: "The physician shrugs. You are wasting both of your time." };
-      const err = pay(run, 24, true);
+      const err = pay(run, PHYSICIAN, true);
       if (err) return { ok: false, msg: err };
       run.deepCut = false;
       run.hp = 100;
@@ -688,8 +814,11 @@
       return { ok: false, msg: "That party already ended." };
     }
     if (action === "fight") {
-      if (!nextFight(arg | 0)) return { ok: false, msg: "No bout on the card." };
-      return { ok: true, fight: true, msg: "The gate." };
+      const offers = card(run);
+      const f = offers.find((x) => x.id === arg);
+      if (!f) return { ok: false, msg: "That bout is not on today's card." };
+      run.currentId = f.id;
+      return { ok: true, fight: true, msg: f.title };
     }
     return { ok: false, msg: "Nothing happens." };
   }
@@ -705,14 +834,20 @@
     run.fans += 2;
     run.fame += 1;
     run.wins += 1;
+    if (!run.beaten) run.beaten = {};
+    if (fight.id) run.beaten[fight.id] = true;
+    run.currentId = null;
     run.lastTaken = Math.max(0, Math.round(fightMax - hp));
     if (hp < fightMax * 0.45) run.deepCut = true;
     run.hp = Math.max(1, Math.min(hpMax(run), Math.round(hp)));
     freshness(run);
-    const bits = ["Purse +" + purse + "."];
+    const bits = [fight.title + " is down. Purse +" + purse + "."];
     if (rent) bits.push("The house added " + rent + ".");
-    if (run.deepCut && hp < fightMax * 0.45) bits.push("A deep cut. The physician can close it.");
-    else if (run.hp < hpMax(run)) bits.push("You are still bleeding. The bed is cheaper than pride.");
+    else if (run.fans >= 4) bits.push("The cheap seats shouted the name.");
+    const maxNow = hpMax(run);
+    if (run.deepCut && hp < fightMax * 0.45) bits.push("A deep cut. You are at " + run.hp + "/" + maxNow + ". The physician, the bed, or the gate.");
+    else if (run.hp < maxNow) bits.push("You are at " + run.hp + "/" + maxNow + ". Heal, or go back in hurt.");
+    else bits.push("You are whole. The card is already arguing about you.");
     return { purse: purse + rent, note: bits.join(" ") };
   }
 
@@ -786,16 +921,23 @@
     return b;
   }
 
-  function paint(root, run, sheet) {
+  function paint(root, run, sheet, meta) {
     root.replaceChildren();
     const max = hpMax(run);
+    const mods = combatMods(run, meta);
     const top = el("div", "hub-top");
     top.appendChild(el("b", null, run.name));
-    top.appendChild(el("span", null, fameTitle(run.fame) + " · Day " + run.day + " · " + run.days + (run.days === 1 ? " day" : " days")));
+    top.appendChild(el("span", null, fameTitle(run.fame) + " · " + run.days + (run.days === 1 ? " day left" : " days left")));
     const wound = run.deepCut ? " · deep cut" : "";
     top.appendChild(el("span", null, run.gold + " denarii · " + run.hp + "/" + max + " HP" + wound));
     root.appendChild(top);
     root.appendChild(el("p", "hub-note", run.note || ""));
+    const preview = el("p", "hub-preview");
+    preview.textContent = "Next sand: hit " + mods.dmg + " · defense " + mods.def + " · wind " + mods.stamMax +
+      (mods.speed > 74 ? " · quick feet" : "") +
+      " · walk in at " + run.hp + "/" + max +
+      (run.oil ? " · oil +" + run.oil : "");
+    root.appendChild(preview);
 
     const row = el("div", "hub-row");
     STATIONS.forEach((s) => {
@@ -803,16 +945,7 @@
       if (sheet === s.id) b.classList.add("is-on");
       row.appendChild(b);
     });
-    const fight = nextFight(run._index || 0);
-    if (fight) row.appendChild(actButton(run.days ? "Fight early" : "To the sand", "fight", String(run._index || 0), false));
     root.appendChild(row);
-
-    const stats = el("p", "hub-stats");
-    stats.textContent = "STR " + run.str + "  SPD " + run.spd + "  WND " + run.sta +
-      "   " + WEAPONS[run.weapon].name + " · " + ARMORS[run.armor].name +
-      (run.cosmetic !== "none" ? " · " + LOOKS[run.cosmetic].name : "") +
-      "   Fans " + run.fans + (run.patron === "gallus" ? " · Gallus" : "");
-    root.appendChild(stats);
 
     if (!sheet) return;
     const sheetEl = el("div", "hub-sheet");
@@ -821,56 +954,66 @@
     const noDay = run.days < 1;
 
     if (sheet === "yard") {
-      sheetEl.appendChild(el("p", null, "A day and some coin. The change shows up in the next fight, not in a speech."));
+      sheetEl.appendChild(el("p", null, "One day. You feel it on the next swing, not on a plaque."));
       Object.keys(TRAIN).forEach((id) => {
         const spec = TRAIN[id];
         const rank = run[id];
+        const ghost = Object.assign({}, run);
+        ghost[id] = Math.min(spec.max, rank + 1);
+        const next = combatMods(ghost, meta);
+        let payoff = spec.blurb;
+        if (id === "str") payoff = "Next hit " + mods.dmg + " → " + next.dmg + ".";
+        if (id === "spd") payoff = "Feet " + mods.speed + " → " + next.speed + ".";
+        if (id === "sta") payoff = "Wind " + mods.stamMax + " → " + next.stamMax + ".";
         const line = el("div", "hub-line");
-        line.appendChild(el("span", null, spec.name + " " + rank + "/" + spec.max + " — " + spec.blurb));
+        line.appendChild(el("span", null, spec.name + " " + rank + "/" + spec.max + ". " + payoff));
         line.appendChild(actButton(rank >= spec.max ? "Maxed" : spec.gold + " denarii", "train", id, rank >= spec.max || noDay || run.gold < spec.gold));
         sheetEl.appendChild(line);
       });
     } else if (sheet === "smith") {
-      sheetEl.appendChild(el("p", null, "Buying spends a day. The smith does not do rush work for freedmen."));
-      Object.keys(WEAPONS).forEach((id) => {
-        if (id === "gladius") return;
+      sheetEl.appendChild(el("p", null, "A day at the forge. The number is what the next opponent feels."));
+      ["arena", "sica", "spatha"].forEach((id) => {
         const item = WEAPONS[id];
+        const ghost = Object.assign({}, run, { weapon: id });
+        const next = combatMods(ghost, meta).dmg;
         const line = el("div", "hub-line");
         const owned = run.weapon === id;
-        line.appendChild(el("span", null, item.name + " — " + item.blurb));
-        line.appendChild(actButton(owned ? "Equipped" : item.price + " denarii", "weapon", id, owned || noDay || run.gold < item.price));
+        line.appendChild(el("span", null, item.name + ". Hits for " + next + (owned ? " (wearing it)." : ", not " + mods.dmg + ".")));
+        line.appendChild(actButton(owned ? "Wearing" : item.price + " denarii", "weapon", id, owned || noDay || run.gold < item.price));
         sheetEl.appendChild(line);
       });
-      sheetEl.appendChild(el("p", null, "Armor. Defense comes off the top of a hit. A perfect read still matters more."));
-      Object.keys(ARMORS).forEach((id) => {
-        if (id === "rags") return;
+      ["leather", "scale", "lorica"].forEach((id) => {
         const item = ARMORS[id];
+        const ghost = Object.assign({}, run, { armor: id });
+        const next = combatMods(ghost, meta).def;
         const line = el("div", "hub-line");
         const owned = run.armor === id;
-        line.appendChild(el("span", null, item.name + " — " + item.blurb));
-        line.appendChild(actButton(owned ? "Equipped" : item.price + " denarii", "armor", id, owned || noDay || run.gold < item.price));
+        line.appendChild(el("span", null, item.name + ". Defense " + mods.def + " → " + next + ". A heavy cut still gets through."));
+        line.appendChild(actButton(owned ? "Wearing" : item.price + " denarii", "armor", id, owned || noDay || run.gold < item.price));
         sheetEl.appendChild(line);
       });
     } else if (sheet === "market") {
-      sheetEl.appendChild(el("p", null, "None of this stops a blade. All of it changes who can see you from the cheap seats. Lady Marcia cares."));
+      sheetEl.appendChild(el("p", null, "No defense. Marcia pays people who already look like someone."));
       Object.keys(LOOKS).forEach((id) => {
         if (id === "none") return;
         const item = LOOKS[id];
         const line = el("div", "hub-line");
         const owned = run.cosmetic === id;
-        line.appendChild(el("span", null, item.name + " — " + item.blurb));
+        line.appendChild(el("span", null, item.name + ". " + item.blurb));
         line.appendChild(actButton(owned ? "Wearing" : item.price + " denarii", "cosmetic", id, owned || noDay || run.gold < item.price));
         sheetEl.appendChild(line);
       });
     } else if (sheet === "heal") {
-      sheetEl.appendChild(el("p", null, "You enter the next fight at the health you leave with. A deep cut also lowers your maximum until a physician closes it."));
+      sheetEl.appendChild(el("p", null, run.deepCut
+        ? "Deep cut. Your maximum stays " + max + " until a physician closes it. The next fight uses this body."
+        : "The next fight uses this body. Rest is free and slow. The physician is not."));
       const line1 = el("div", "hub-line");
-      line1.appendChild(el("span", null, "Rest the day. Free. +30 health. Does not close a deep cut."));
+      line1.appendChild(el("span", null, "Bed. Free. +" + Math.min(32, max - run.hp) + " health, up to " + max + "."));
       line1.appendChild(actButton("Rest", "rest", "", noDay || (run.hp >= max && !run.deepCut)));
       sheetEl.appendChild(line1);
       const line2 = el("div", "hub-line");
-      line2.appendChild(el("span", null, "Physician. 24 denarii. Full health, deep cut closed."));
-      line2.appendChild(actButton("Pay", "physician", "", noDay || run.gold < 24 || (run.hp >= 100 && !run.deepCut)));
+      line2.appendChild(el("span", null, "Physician. " + PHYSICIAN + " denarii. Full health, deep cut closed."));
+      line2.appendChild(actButton("Pay", "physician", "", noDay || run.gold < PHYSICIAN || (run.hp >= 100 && !run.deepCut)));
       sheetEl.appendChild(line2);
     } else if (sheet === "home") {
       const here = VILLA[run.villa];
@@ -883,48 +1026,58 @@
         sheetEl.appendChild(line);
       }
     } else if (sheet === "court") {
-      sheetEl.appendChild(el("p", null, "A day spent on people who own the city. They pay in coin, cloth, or a sharper next fight."));
+      sheetEl.appendChild(el("p", null, "A day. Coin, cloth, or a sharper next fight."));
       const g = el("div", "hub-line");
-      g.appendChild(el("span", null, "Senator Gallus. +24 now, and +12 on every purse."));
+      g.appendChild(el("span", null, "Gallus. Free. +24 now, and +12 on every purse after."));
       g.appendChild(actButton(run.court.gallus ? "Seen" : "Court", "court", "gallus", noDay || run.court.gallus));
       sheetEl.appendChild(g);
       const m = el("div", "hub-line");
-      m.appendChild(el("span", null, "Lady Marcia. Costs 10. A costume if you are bare, otherwise coin."));
+      m.appendChild(el("span", null, "Marcia. 10 denarii. A costume if you are bare, otherwise 28 back."));
       m.appendChild(actButton(run.court.marcia ? "Seen" : "Court", "court", "marcia", noDay || run.court.marcia || run.gold < 10));
       sheetEl.appendChild(m);
       const r = el("div", "hub-line");
-      r.appendChild(el("span", null, "General Rufus. A clean last fight earns blade oil. A messy one earns 12 denarii and advice."));
+      r.appendChild(el("span", null, "Rufus. Free. A clean last fight puts oil on the next blade. A messy one pays 12."));
       r.appendChild(actButton(run.court.rufus ? "Seen" : "Court", "court", "rufus", noDay || run.court.rufus));
       sheetEl.appendChild(r);
-      sheetEl.appendChild(el("h3", null, "Parties"));
       const feast = el("div", "hub-line");
-      feast.appendChild(el("span", null, "Street feast. 15 denarii. Fans, and a tip on the next purse."));
+      feast.appendChild(el("span", null, "Street feast. 15. The next purse comes back fatter."));
       feast.appendChild(actButton("Host", "party", "feast", noDay || run.gold < 15));
       sheetEl.appendChild(feast);
       const supper = el("div", "hub-line");
-      supper.appendChild(el("span", null, "Noble supper. 40 denarii. A patron, or coin if you already have one."));
+      supper.appendChild(el("span", null, "Noble supper. 40. A patron, or coin if you already have one."));
       supper.appendChild(actButton("Host", "party", "supper", noDay || run.gold < 40));
       sheetEl.appendChild(supper);
       const boast = el("div", "hub-line");
-      boast.appendChild(el("span", null, "Boast about " + RIVAL + ". 25 denarii. He spends money on your next opponent, and he hits faster when you finally meet. His purse grows too."));
+      boast.appendChild(el("span", null, "Boast about " + RIVAL + ". 25. The next bout is tougher. His purse, when you meet, is larger."));
       boast.appendChild(actButton("Provoke", "party", "boast", noDay || run.gold < 25));
       sheetEl.appendChild(boast);
     } else if (sheet === "gate") {
-      if (!fight) {
-        sheetEl.appendChild(el("p", null, "The card is blank."));
-      } else {
-        sheetEl.appendChild(el("p", null, fight.kicker + " — " + fight.title));
-        sheetEl.appendChild(el("p", null, fight.sub));
-        sheetEl.appendChild(el("p", null, fight.tip));
-        sheetEl.appendChild(el("p", null, "Purse " + fight.purse + " denarii, plus fans" + (run.patron === "gallus" ? " and Gallus" : "") + ". You go in at " + run.hp + "/" + max + " health."));
-        if (run.heatPending && fight.kind !== "varro" && fight.kind !== "aelia") {
-          sheetEl.appendChild(el("p", null, RIVAL + " has paid this one. They will have more blood to spend."));
-        }
-        if (fight.kind === "varro" && run.rivalHeat) {
-          sheetEl.appendChild(el("p", null, "He has heard you " + run.rivalHeat + " time" + (run.rivalHeat > 1 ? "s" : "") + ". Faster hands. A fatter purse."));
-        }
-        sheetEl.appendChild(actButton("Enter the sand", "fight", String(run._index || 0), false));
+      const offers = card(run);
+      sheetEl.appendChild(el("p", null, offers.length > 1
+        ? "Pick one. The others wait, and so does the hurt you walk in with."
+        : "One name left on the card."));
+      if (run.heatPending) {
+        sheetEl.appendChild(el("p", null, RIVAL + " paid the next ordinary bout. They have more blood."));
       }
+      if (!offers.length) {
+        sheetEl.appendChild(el("p", null, "The card is blank."));
+      }
+      offers.forEach((f) => {
+        const cardEl = el("div", "fight-card" + (f.booked ? " booked" : ""));
+        cardEl.appendChild(el("b", null, f.kicker + " — " + f.title));
+        cardEl.appendChild(el("span", null, f.tagline));
+        let money = "Purse " + f.purse;
+        if (run.patron === "gallus") money += " + Gallus";
+        if (run.partyTip) money += " + crowd";
+        money += " · " + f.risk;
+        if (run.hp < max * 0.7) money += " · you are hurt";
+        cardEl.appendChild(el("span", null, money));
+        if (f.id === "varro" && run.rivalHeat) {
+          cardEl.appendChild(el("span", null, "He heard you. Faster hands. Purse grows by " + (run.rivalHeat * 15) + "."));
+        }
+        cardEl.appendChild(actButton("Take this fight", "fight", f.id, false));
+        sheetEl.appendChild(cardEl);
+      });
     }
     const close = actButton("Back to the street", "close", "", false);
     sheetEl.appendChild(close);
@@ -997,7 +1150,11 @@
     createRun: createRun,
     hpMax: hpMax,
     fameTitle: fameTitle,
-    nextFight: nextFight,
+    fightById: fightById,
+    card: card,
+    saveRun: saveRun,
+    loadRun: loadRun,
+    clearRun: clearRun,
     perform: perform,
     onWin: onWin,
     combatMods: combatMods,
