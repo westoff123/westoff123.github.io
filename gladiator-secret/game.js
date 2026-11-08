@@ -1,5 +1,5 @@
-/* Gladiator Secret — Act I
-   Top-down pit combat. No external assets.
+/* Gladiator Secret — pit combat plus the career that starts when the gate opens.
+   Top-down fights. No external assets.
    Desktop: WASD, mouse aim, left click attack, right click block, Space dodge.
    Touch: joystick, Attack / Block / Dodge. Aim follows the stick, or the enemy when you stand still. */
 (function () {
@@ -148,6 +148,9 @@
     boss: { sprite: "boss", hp: 250, speed: 34, r: 11, prefer: 34, think: 0.2, weapon: { len: 26, thick: 1, color: "#e4e7ee", edge: "#2a3038" } },
   };
 
+  Object.assign(PATTERNS, window.GS_CAREER.PATTERNS);
+  Object.assign(KINDS, window.GS_CAREER.KINDS);
+
   const GLYPH = {
     "0": ["111", "101", "101", "101", "111"],
     "1": ["010", "110", "010", "010", "111"],
@@ -162,6 +165,7 @@
     A: ["010", "101", "111", "101", "101"],
     B: ["110", "101", "110", "101", "110"],
     C: ["111", "100", "100", "100", "111"],
+    D: ["110", "101", "101", "101", "110"],
     E: ["111", "100", "110", "100", "111"],
     G: ["111", "100", "101", "101", "111"],
     K: ["101", "110", "100", "110", "101"],
@@ -216,6 +220,17 @@
   let stats = { dealt: 0, taken: 0, perfects: 0, cleared: 0 };
   let player = null;
   let enemy = null;
+  let partner = null;
+  let corpses = [];
+  let act = 1;
+  let careerIndex = 0;
+  let run = null;
+  let meta = window.GS_CAREER.load();
+  let prisonerName = "";
+  let banked = 0;
+  let venue = "pit";
+  let hubSheet = null;
+  let hubNear = null;
   const particles = [];
   const numbers = [];
   const decals = [];
@@ -459,15 +474,47 @@
 
   /* ---------- entities ---------- */
   function makePlayer() {
+    const body = window.GS_CAREER.legendBody(meta);
     return {
       x: 160, y: 136, r: PLAYER.r, facing: -Math.PI / 2,
-      hp: PLAYER.hp, hpMax: PLAYER.hp, stam: PLAYER.stam, stamMax: PLAYER.stam,
+      hp: PLAYER.hp, hpMax: PLAYER.hp, stam: PLAYER.stam + body.stam, stamMax: PLAYER.stam + body.stam,
       action: "none", actionT: 0, alive: true,
       vx: 0, vy: 0, iFrames: 0, hitstun: 0, flash: 0,
       armedParry: 0, guardLock: 0, stamDelay: 0,
       attackHit: false, blockStart: -10, walked: 0, hitsLanded: 0, blockHits: 0, perfects: 0, dodgeAvoids: 0,
       swings: [], trail: [], lastDir: -Math.PI / 2,
+      slowT: 0, swingFoe: null,
+      dmg: PLAYER.dmg + body.dmgBonus,
+      def: body.def,
+      speed: PLAYER.speed,
+      weaponLook: body.blade
+        ? { len: 20, thick: 1, color: "#e4e7ee", edge: "#e8c070" }
+        : { len: 18, thick: 1, color: "#e4e7ee", edge: "#2a3038" },
+      look: null,
     };
+  }
+
+  function applyCareerCombat(p) {
+    const mods = window.GS_CAREER.combatMods(run, meta);
+    p.dmg = mods.dmg;
+    p.def = mods.def;
+    p.speed = mods.speed;
+    p.stamMax = mods.stamMax;
+    p.stam = mods.stamMax;
+    p.hpMax = mods.hpMax;
+    p.hp = Math.max(1, Math.min(mods.hpMax, Math.round(run.hp)));
+    p.weaponLook = mods.weaponLook;
+    p.look = mods.look;
+    if (run.oil) run.oil = 0;
+  }
+
+  function syncStreetLook() {
+    if (!run) return;
+    const mods = window.GS_CAREER.combatMods(run, meta);
+    player.look = mods.look;
+    player.weaponLook = mods.weaponLook;
+    player.hp = run.hp;
+    player.hpMax = window.GS_CAREER.hpMax(run);
   }
 
   function spawnEnemy(kind) {
@@ -496,6 +543,10 @@
       hit: p.hit ? { ...p.hit } : undefined,
       telegraph: p.telegraph ? { ...p.telegraph } : undefined,
     }));
+    if (e.kind === "varro" && run && run.rivalHeat) {
+      const m = Math.max(0.82, 1 - run.rivalHeat * 0.05);
+      phases.forEach((p) => { if (p.tag === "windup") p.t *= m; });
+    }
     if (e.enraged && src.scales) {
       phases.forEach((p) => {
         if (p.tag === "windup" || p.tag === "recover") p.t *= 0.8;
@@ -524,20 +575,41 @@
     e.vy += Math.sin(ang) * 40;
   }
 
-  function killEnemy() {
-    if (!enemy || !enemy.alive && enemy.hp <= 0) return;
-    enemy.hp = 0;
-    enemy.alive = false;
-    enemy.pattern = null;
+  function killEnemy(which) {
+    const fallen = which || enemy;
+    if (!fallen || !fallen.alive) return;
+    fallen.hp = 0;
+    fallen.alive = false;
+    fallen.pattern = null;
+    burst(fallen.x, fallen.y - 8, "#e23b32", 16, 60);
+    splatter(fallen.x, fallen.y, "#6a1414");
+    bump(0.1, 0.75);
+    sfx("hit");
+    if (fallen === partner) {
+      corpses.push(fallen);
+      partner = null;
+      showBanner("One down", "The other remains", "They came as a pair.", 1.15);
+      announce("One falls. One remains.");
+      return;
+    }
+    if (partner && partner.alive) {
+      corpses.push(fallen);
+      enemy = partner;
+      partner = null;
+      showBanner("One down", "The other remains", "They came as a pair.", 1.15);
+      announce("One falls. One remains.");
+      return;
+    }
     stats.cleared += 1;
     mode = "victory";
     victoryT = 1.2;
-    burst(enemy.x, enemy.y - 8, "#e23b32", 16, 60);
-    splatter(enemy.x, enemy.y, "#6a1414");
-    bump(0.1, 0.75);
-    sfx("hit");
     hidePrompt();
-    if (fightIndex >= FIGHTS.length - 1) {
+    if (act === 1) banked += [8, 12, 14, 40][fightIndex] || 0;
+    if (act === 2) {
+      const card = window.GS_CAREER.FIGHTS[careerIndex];
+      showBanner("Down", card ? card.title : "Down", "The street is through the gate.", 1.05);
+      announce((card ? card.title : "The fighter") + " defeated.");
+    } else if (fightIndex >= FIGHTS.length - 1) {
       gateOpen = true;
       showBanner("The gate", "It opens", "You are still standing.", 1.15);
       announce("The Pit Boss falls. The gate opens.");
@@ -545,6 +617,17 @@
       showBanner("Down", FIGHTS[fightIndex].title, "The next fighter is already walking out.", 1.05);
       announce(FIGHTS[fightIndex].title + " defeated.");
     }
+  }
+
+  function triggerRivalRage(e) {
+    e.enraged = true;
+    e.speed = Math.round(e.speed * 1.18);
+    startPattern(e, "bossRoar");
+    const name = e.kind === "aelia" ? window.GS_CAREER.CHAMPION : window.GS_CAREER.RIVAL;
+    showBanner("Enraged", name, e.kind === "aelia" ? "The sun gets meaner." : "He stops performing and starts hunting.", 1.3);
+    sfx("roar");
+    bump(0.08, 0.6);
+    announce(name + " is enraged.");
   }
 
   function killPlayer() {
@@ -601,6 +684,7 @@
 
   function hurtPlayer(dmg, srcX, srcY, hitstun, kb) {
     if (!player.alive) return;
+    if (dmg > 0 && player.def) dmg = Math.max(1, Math.round(dmg) - player.def);
     player.hp = Math.max(0, player.hp - dmg);
     stats.taken += dmg;
     player.flash = 1;
@@ -667,6 +751,7 @@
       player.blockHits += 1;
       if (perfect) sfx("perfect");
       else sfx("block");
+      applySnare(hit, true, perfect);
       hurtPlayer(dmg, e.x, e.y, perfect ? 0.12 : 0.2, perfect ? 36 : 70);
       if (perfect && hit.stagger && enemy && enemy.alive) staggerEnemy(e, hit.stagger);
       player.armedParry = 0;
@@ -692,27 +777,37 @@
           player.vx += Math.cos(ang) * 36;
           player.vy += Math.sin(ang) * 36;
         }
+        applySnare(hit, true, false);
       }
       if (player.alive && player.stam <= 0 && player.action === "block") guardBreak();
       return;
     }
 
     hurtPlayer(hit.dmg, e.x, e.y, hit.hitstun ?? 0.2, hit.kb ?? 80);
+    applySnare(hit, false, false);
+  }
+
+  function applySnare(hit, blocked, perfect) {
+    if (!hit || !hit.snare || perfect) return;
+    const dur = blocked ? hit.snare * 0.45 : hit.snare;
+    player.slowT = Math.max(player.slowT || 0, dur);
+    floater(player.x, player.y - 28, "SNARE", "#f0c84a");
   }
 
   function onPlayerHitEnemy() {
-    const e = enemy;
+    const e = (player.swingFoe && player.swingFoe.alive) ? player.swingFoe : enemy;
     if (!e || !e.alive) return;
     const ph = currentPhase(e);
     if (ph && ph.tag === "guard") {
       sfx("block");
       burst(e.x, e.y - 12, "#9ad0ff", 8, 40);
       floater(e.x, e.y - 26, "COUNTER", "#9ad0ff");
-      startPattern(e, "bossCounter");
+      const cid = ph.counter || (e.kind === "boss" ? "bossCounter" : null);
+      if (cid) startPattern(e, cid);
       bump(0.05, 0.3);
       return;
     }
-    let dmg = PLAYER.dmg;
+    let dmg = player.dmg || PLAYER.dmg;
     const armor = ph && ph.armor != null ? ph.armor : 1;
     const skid = armor < 0.95;
     if (skid) dmg = Math.max(1, Math.round(dmg * armor));
@@ -739,18 +834,32 @@
       if (e.pattern && !e.pattern.superArmor) e.pattern = null;
     }
     if (e.hp <= 0) {
-      killEnemy();
+      killEnemy(e);
       return;
     }
     if (e.kind === "boss" && !e.enraged && e.hp <= e.hpMax * 0.45) triggerEnrage(e);
+    else if (!e.enraged && e.hp <= e.hpMax * 0.4 && (e.kind === "varro" || e.kind === "aelia")) triggerRivalRage(e);
+  }
+
+  function foeInSwing(e) {
+    if (!e || !e.alive) return false;
+    const d = dist(player, e);
+    if (d > ATTACK.range + e.r) return false;
+    const ang = Math.atan2(e.y - player.y, e.x - player.x);
+    return Math.abs(angDiff(ang, player.facing)) <= ATTACK.arc * 0.5;
   }
 
   function swingConnects() {
-    if (!enemy || !enemy.alive) return false;
-    const d = dist(player, enemy);
-    if (d > ATTACK.range + enemy.r) return false;
-    const ang = Math.atan2(enemy.y - player.y, enemy.x - player.x);
-    return Math.abs(angDiff(ang, player.facing)) <= ATTACK.arc * 0.5;
+    const list = [];
+    if (foeInSwing(enemy)) list.push(enemy);
+    if (foeInSwing(partner)) list.push(partner);
+    if (!list.length) {
+      player.swingFoe = null;
+      return false;
+    }
+    list.sort((a, b) => dist(player, a) - dist(player, b));
+    player.swingFoe = list[0];
+    return true;
   }
 
   /* ---------- player actions ---------- */
@@ -832,11 +941,13 @@
     if (inp.aimOk) ang = Math.atan2(inp.aimY - player.y, inp.aimX - player.x);
     else if (touchMode()) {
       const mag = Math.hypot(inp.mx, inp.my);
-      if ((player.action === "block" || mag < 0.22) && enemy && enemy.alive) {
-        ang = Math.atan2(enemy.y - player.y, enemy.x - player.x);
+      const near = nearestFoe();
+      if ((player.action === "block" || mag < 0.22) && near) {
+        ang = Math.atan2(near.y - player.y, near.x - player.x);
       } else if (mag >= 0.22) ang = Math.atan2(inp.my, inp.mx);
-    } else if (enemy && enemy.alive) {
-      ang = Math.atan2(enemy.y - player.y, enemy.x - player.x);
+    } else {
+      const near = nearestFoe();
+      if (near) ang = Math.atan2(near.y - player.y, near.x - player.x);
     }
     if (ang == null) return;
     if (player.action === "attack" && player.actionT >= 0.04) return;
@@ -846,7 +957,7 @@
   function applyMove(inp, dt, mul) {
     const mag = Math.hypot(inp.mx, inp.my);
     if (mag < 0.12 || !player.alive) return;
-    const sp = PLAYER.speed * mul;
+    const sp = (player.speed || PLAYER.speed) * (player.slowT > 0 ? 0.45 : 1) * mul;
     tryMove(player, (inp.mx / mag) * sp * dt, (inp.my / mag) * sp * dt);
     player.walked += sp * dt;
     player.lastDir = Math.atan2(inp.my, inp.mx);
@@ -861,6 +972,7 @@
   function stepPlayer(inp, dt) {
     player.iFrames = Math.max(0, player.iFrames - dt);
     player.flash = Math.max(0, player.flash - dt * 7);
+    player.slowT = Math.max(0, (player.slowT || 0) - dt);
     player.armedParry = Math.max(0, player.armedParry - dt);
     player.guardLock = Math.max(0, player.guardLock - dt);
     player.hitstun = Math.max(0, player.hitstun - dt);
@@ -1009,7 +1121,13 @@
     if (e.kind === "prisoner") return "prisonerSwing";
     if (e.kind === "brute") return "bruteSlam";
     if (e.kind === "hound") return "houndLunge";
-    return pickBoss(e);
+    if (e.kind === "boss") return pickBoss(e);
+    return window.GS_CAREER.pick(e, {
+      dist: dist(e, player),
+      blocking: player.action === "block",
+      swings: player.swings.filter((t) => time - t < 1.2).length,
+      hp: e.hpMax ? e.hp / e.hpMax : 1,
+    });
   }
 
   function think(e, dt) {
@@ -1020,47 +1138,75 @@
     const sp = e.speed;
     if (d > e.prefer + 3) tryMove(e, (dx / d) * sp * dt, (dy / d) * sp * dt);
     else if (d < e.prefer - 16) tryMove(e, (-dx / d) * sp * 0.65 * dt, (-dy / d) * sp * 0.65 * dt);
-    else if (e.kind === "hound") tryMove(e, (-dy / d) * sp * dt, (dx / d) * sp * dt);
+    else if (e.kind === "hound" || e.kind === "lion") tryMove(e, (-dy / d) * sp * dt, (dx / d) * sp * dt);
     e.thinkT -= dt;
     if (e.thinkT > 0) return;
     startPattern(e, choosePattern(e));
   }
 
-  function updateEnemy(dt) {
-    if (!enemy) return;
-    enemy.flash = Math.max(0, enemy.flash - dt * 8);
-    enemy.vx = damp(enemy.vx, dt);
-    enemy.vy = damp(enemy.vy, dt);
-    tryMove(enemy, enemy.vx * dt, enemy.vy * dt);
-    if (!enemy.alive) return;
-    if (enemy.hitstun > 0) {
-      enemy.hitstun -= dt;
+  function updateOneFoe(e, dt) {
+    if (!e) return;
+    e.flash = Math.max(0, e.flash - dt * 8);
+    e.vx = damp(e.vx, dt);
+    e.vy = damp(e.vy, dt);
+    tryMove(e, e.vx * dt, e.vy * dt);
+    if (!e.alive) return;
+    if (e.hitstun > 0) {
+      e.hitstun -= dt;
       return;
     }
     if (mode !== "fight") {
-      enemy.facing = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+      e.facing = Math.atan2(player.y - e.y, player.x - e.x);
       return;
     }
-    if (enemy.pattern) tickPattern(enemy, dt);
-    else think(enemy, dt);
+    if (e.pattern) tickPattern(e, dt);
+    else think(e, dt);
   }
 
-  function separate() {
-    if (!enemy) return;
-    const dx = enemy.x - player.x;
-    const dy = enemy.y - player.y;
+  function updateEnemy(dt) {
+    if (enemy) updateOneFoe(enemy, dt);
+    if (partner) updateOneFoe(partner, dt);
+  }
+
+  function pushApart(a, b) {
+    if (!a || !b) return;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
     const d = Math.hypot(dx, dy) || 0.0001;
-    const min = player.r + enemy.r - 1;
+    const min = a.r + b.r - 1;
     if (d >= min) return;
     const push = (min - d) / 2;
     const nx = dx / d;
     const ny = dy / d;
-    player.x -= nx * push;
-    player.y -= ny * push;
-    enemy.x += nx * push;
-    enemy.y += ny * push;
-    if (!inside(player)) { player.x += nx * push; player.y += ny * push; }
-    if (!inside(enemy)) { enemy.x -= nx * push; enemy.y -= ny * push; }
+    a.x -= nx * push;
+    a.y -= ny * push;
+    b.x += nx * push;
+    b.y += ny * push;
+    if (!inside(a)) { a.x += nx * push; a.y += ny * push; }
+    if (!inside(b)) { b.x -= nx * push; b.y -= ny * push; }
+  }
+
+  function separate() {
+    if (enemy) pushApart(player, enemy);
+    if (partner && partner.alive) pushApart(player, partner);
+    if (enemy && enemy.alive && partner && partner.alive) pushApart(enemy, partner);
+  }
+
+  function livingFoes() {
+    const list = [];
+    if (enemy && enemy.alive) list.push(enemy);
+    if (partner && partner.alive) list.push(partner);
+    return list;
+  }
+
+  function nearestFoe() {
+    let best = null;
+    let bd = 1e9;
+    livingFoes().forEach((e) => {
+      const d = dist(player, e);
+      if (d < bd) { bd = d; best = e; }
+    });
+    return best;
   }
 
   /* ---------- input ---------- */
@@ -1109,7 +1255,16 @@
   }
 
   /* ---------- lessons / flow ---------- */
+  function currentCard() {
+    if (act === 2) return window.GS_CAREER.FIGHTS[careerIndex] || window.GS_CAREER.FIGHTS[0];
+    return FIGHTS[fightIndex] || FIGHTS[0];
+  }
+
   function lessonId() {
+    if (act === 2) {
+      const f = window.GS_CAREER.FIGHTS[careerIndex];
+      return f && f.tip && lessonI === 0 ? "tip" : null;
+    }
     const list = FIGHTS[fightIndex] ? FIGHTS[fightIndex].lessons : [];
     return list[lessonI] || null;
   }
@@ -1123,6 +1278,11 @@
     }
     if (mode === "intro") { el.hidden = true; return; }
     el.hidden = false;
+    if (id === "tip") {
+      const f = window.GS_CAREER.FIGHTS[careerIndex];
+      el.textContent = f ? f.tip : "";
+      return;
+    }
     el.textContent = LESSONS[id][touchMode() ? "touch" : "desk"];
   }
 
@@ -1137,6 +1297,7 @@
     if (id === "block" && (player.perfects > 0 || (player.blockHits > 0 && fightTime > 6))) done = true;
     if (id === "dodge" && player.dodgeAvoids > 0) done = true;
     if (id === "boss" && fightTime > 8.5) done = true;
+    if (id === "tip" && fightTime > 6.5) done = true;
     if (!done) return;
     lessonI += 1;
     hitsAtLesson = player.hitsLanded;
@@ -1175,7 +1336,7 @@
 
   function showOverlay(which) {
     $("overlay").hidden = false;
-    ["title", "pause", "dead", "free"].forEach((name) => {
+    ["title", "pause", "dead", "free", "champion", "hall", "legend"].forEach((name) => {
       $("panel-" + name).hidden = name !== which;
     });
     if (which === "dead") fillStats($("dead-stats"));
@@ -1186,7 +1347,7 @@
   function hideOverlay() { $("overlay").hidden = true; }
 
   function fillStats(el) {
-    const fights = stats.cleared + " / " + FIGHTS.length;
+    const fights = act === 1 && !run ? stats.cleared + " / " + FIGHTS.length : String(stats.cleared);
     el.innerHTML =
       "<div>Fights cleared<b>" + fights + "</b></div>" +
       "<div>Perfect blocks<b>" + stats.perfects + "</b></div>" +
@@ -1229,6 +1390,9 @@
     player.attackHit = false;
     player.blockStart = -10;
     enemy = spawnEnemy(f.kind);
+    partner = null;
+    corpses = [];
+    venue = "pit";
     particles.length = 0;
     numbers.length = 0;
     decals.length = 0;
@@ -1245,31 +1409,219 @@
 
   function startRun() {
     stats = { dealt: 0, taken: 0, perfects: 0, cleared: 0 };
+    act = 1;
+    run = null;
+    careerIndex = 0;
+    banked = 0;
+    partner = null;
+    corpses = [];
+    venue = "pit";
+    hubSheet = null;
+    hubNear = null;
+    prisonerName = window.GS_CAREER.randomName();
+    meta = window.GS_CAREER.load();
     player = makePlayer();
+    document.body.classList.remove("hub-on");
+    $("hub-dock").hidden = true;
     hideOverlay();
     beginFight(0);
     sfx("ui");
   }
 
+  function leaveHubChrome() {
+    document.body.classList.remove("hub-on");
+    $("hub-dock").hidden = true;
+  }
+
+  function refreshHub() {
+    const on = mode === "hub";
+    document.body.classList.toggle("hub-on", on);
+    $("hub-dock").hidden = !on;
+    if (!on || !run) return;
+    run._index = careerIndex;
+    syncStreetLook();
+    window.GS_CAREER.paint($("hub-dock"), run, hubSheet);
+  }
+
+  function enterCareerFromPit() {
+    const hurt = player.hp < player.hpMax * 0.5;
+    run = window.GS_CAREER.createRun({
+      name: prisonerName,
+      hp: Math.max(1, player.hp),
+      gold: banked,
+    });
+    if (hurt) run.deepCut = true;
+    run.hp = Math.min(run.hp, window.GS_CAREER.hpMax(run));
+    act = 2;
+    careerIndex = 0;
+    run._index = 0;
+    venue = "street";
+    enemy = null;
+    partner = null;
+    corpses = [];
+    hubSheet = "gate";
+    hubNear = null;
+    mode = "hub";
+    player.x = 160;
+    player.y = 96;
+    player.action = "none";
+    player.alive = true;
+    player.vx = player.vy = 0;
+    syncStreetLook();
+    hideOverlay();
+    showBanner("You are free", run.name, "The gate is behind you. The city charges rent.", 2.4);
+    announce("You are free. The career begins.");
+    refreshHub();
+    sfx("win");
+  }
+
+  function beginCareerFight() {
+    const f = window.GS_CAREER.FIGHTS[careerIndex];
+    if (!f || !run) return;
+    const paid = !!(run.heatPending && f.kind !== "varro" && f.kind !== "aelia");
+    venue = f.venue;
+    partner = null;
+    corpses = [];
+    player.x = 160;
+    player.y = 126;
+    player.action = "none";
+    player.actionT = 0;
+    player.alive = true;
+    player.vx = player.vy = 0;
+    player.iFrames = 0.45;
+    player.hitstun = 0;
+    player.flash = 0;
+    player.armedParry = 0;
+    player.guardLock = 0;
+    player.facing = -Math.PI / 2;
+    player.lastDir = -Math.PI / 2;
+    player.walked = 0;
+    player.hitsLanded = 0;
+    player.blockHits = 0;
+    player.perfects = 0;
+    player.dodgeAvoids = 0;
+    player.swings = [];
+    player.trail = [];
+    player.stamDelay = 0;
+    player.attackHit = false;
+    player.blockStart = -10;
+    player.slowT = 0;
+    applyCareerCombat(player);
+    enemy = spawnEnemy(f.kind);
+    enemy.role = "jab";
+    if (f.duo) {
+      enemy.x = 124;
+      partner = spawnEnemy(f.kind);
+      partner.role = "sweep";
+      partner.x = 196;
+      partner.y = 66;
+    }
+    if (paid) {
+      [enemy, partner].forEach((e) => {
+        if (!e) return;
+        e.hp = Math.round(e.hp * 1.15);
+        e.hpMax = e.hp;
+      });
+      run.heatPending = false;
+    }
+    particles.length = 0;
+    numbers.length = 0;
+    decals.length = 0;
+    gateOpen = false;
+    lessonI = 0;
+    hitsAtLesson = 0;
+    fightTime = 0;
+    mode = "intro";
+    introT = 1.6;
+    leaveHubChrome();
+    hideOverlay();
+    const taunt = window.GS_CAREER.taunt(run, f);
+    let sub = taunt || f.sub;
+    if (paid) sub = window.GS_CAREER.RIVAL + " paid them. " + f.sub;
+    showBanner(f.kicker, f.title, sub, 1.8);
+    announce(f.kicker + ". " + f.title + ".");
+  }
+
+  function concludeCareerFight() {
+    const f = window.GS_CAREER.FIGHTS[careerIndex];
+    const result = window.GS_CAREER.onWin(run, f, player.hp, player.hpMax);
+    syncStreetLook();
+    if (f.final) {
+      finishChampion();
+      return;
+    }
+    careerIndex += 1;
+    run._index = careerIndex;
+    enemy = null;
+    partner = null;
+    corpses = [];
+    venue = "street";
+    mode = "hub";
+    hubSheet = "gate";
+    hubNear = null;
+    player.x = 160;
+    player.y = 96;
+    player.action = "none";
+    player.alive = true;
+    run.note = result.note;
+    showBanner("Purse", f.title, result.note, 1.8);
+    refreshHub();
+  }
+
+  function finishChampion() {
+    const pts = window.GS_CAREER.score({ champion: true, careerWins: run.wins, act1Cleared: 4 });
+    window.GS_CAREER.bank(meta, {
+      name: run.name,
+      fate: "Champion of Rome",
+      points: pts,
+      fame: run.fame,
+    });
+    meta = window.GS_CAREER.load();
+    mode = "champion";
+    leaveHubChrome();
+    showOverlay("champion");
+    $("champ-name").textContent = run.name;
+    $("champ-copy").textContent = "Rome says the name. " + run.gold + " denarii on the table, fame " + run.fame + ", and " + pts + " Legend for whoever wakes up in the pit next.";
+    sfx("win");
+    announce("Champion of Rome.");
+  }
+
   function advance() {
     hideBanner();
-    if (fightIndex >= FIGHTS.length - 1) {
-      mode = "free";
-      gateOpen = true;
-      showOverlay("free");
-      sfx("win");
-      announce("You are free.");
-    } else beginFight(fightIndex + 1);
+    if (act === 2) {
+      concludeCareerFight();
+      return;
+    }
+    if (fightIndex >= FIGHTS.length - 1) enterCareerFromPit();
+    else beginFight(fightIndex + 1);
   }
 
   function finishDeath() {
+    const foe = currentCard();
+    const where = run
+      ? "fell to " + (foe ? foe.title : "the sand")
+      : "fell in the pit" + (foe ? " to " + foe.title : "");
+    const pts = window.GS_CAREER.score({
+      champion: false,
+      careerWins: run ? run.wins : 0,
+      act1Cleared: run ? 4 : stats.cleared,
+    });
+    window.GS_CAREER.bank(meta, {
+      name: prisonerName || "A prisoner",
+      fate: where,
+      points: pts,
+      fame: run ? run.fame : 0,
+    });
+    meta = window.GS_CAREER.load();
     mode = "dead";
+    leaveHubChrome();
     showOverlay("dead");
-    announce("Run over. Restart from the first fight.");
+    $("dead-blurb").textContent = "The sand keeps the body. The yard keeps the name. +" + pts + " Legend. The next prisoner starts at the first fight.";
+    announce("Run over. Legend plus " + pts + ".");
   }
 
   function pause() {
-    if (mode === "title" || mode === "dead" || mode === "free" || mode === "paused") return;
+    if (mode === "title" || mode === "dead" || mode === "free" || mode === "paused" || mode === "champion" || mode === "codex") return;
     pausedFrom = mode;
     mode = "paused";
     showOverlay("pause");
@@ -1280,23 +1632,84 @@
     mode = pausedFrom || "fight";
     hideOverlay();
     refreshLesson();
+    if (mode === "hub") refreshHub();
   }
 
   function bootTitle() {
     mode = "title";
+    act = 1;
+    run = null;
     enemy = null;
+    partner = null;
+    corpses = [];
+    venue = "pit";
     player = makePlayer();
     player.x = 160;
     player.y = 110;
     gateOpen = false;
+    leaveHubChrome();
     showOverlay("title");
-    announce("Gladiator Secret. Act one, the pit.");
+    const line = $("title-legend");
+    if (line) {
+      const owned = Object.keys(meta.owned).filter((k) => meta.owned[k]).length;
+      const bits = [];
+      if (meta.hall.length) bits.push(meta.hall.length + " names in the hall");
+      bits.push(meta.points + " Legend to spend");
+      if (owned) bits.push(owned + " unlock" + (owned === 1 ? "" : "s") + " carried into the pit");
+      line.textContent = bits.join(". ") + ".";
+    }
+    announce("Gladiator Secret. A prisoner, then a career, if the gate opens.");
+  }
+
+  function openCodex(which) {
+    mode = "codex";
+    showOverlay(which);
+    if (which === "hall") window.GS_CAREER.paintHall($("hall-body"), meta);
+    if (which === "legend") window.GS_CAREER.paintLegend($("legend-body"), meta);
+  }
+
+  function onHubClick(e) {
+    const b = e.target.closest("[data-act]");
+    if (!b || !run || mode !== "hub") return;
+    const res = window.GS_CAREER.perform(run, b.dataset.act, b.dataset.arg || "");
+    if (res.open) hubSheet = res.open;
+    if (res.close) hubSheet = null;
+    if (res.msg) run.note = res.msg;
+    sfx(res.ok ? "ui" : "empty");
+    announce(res.msg || "");
+    if (res.fight) {
+      beginCareerFight();
+      return;
+    }
+    syncStreetLook();
+    refreshHub();
+  }
+
+  function updateHub(inp, dt) {
+    player.flash = Math.max(0, player.flash - dt * 7);
+    const mag = Math.hypot(inp.mx, inp.my);
+    if (mag > 0.12 && player.alive) {
+      const sp = 68;
+      player.x = clamp(player.x + (inp.mx / mag) * sp * dt, 18, 302);
+      player.y = clamp(player.y + (inp.my / mag) * sp * dt, 52, 164);
+      player.facing = Math.atan2(inp.my, inp.mx);
+      player.lastDir = player.facing;
+    }
+    const st = window.GS_CAREER.stationAt(player.x, player.y, 0);
+    const id = st ? st.id : null;
+    if (id && id !== hubNear) {
+      hubNear = id;
+      hubSheet = id;
+      refreshHub();
+    } else if (!id) hubNear = null;
   }
 
   /* ---------- update / draw ---------- */
   function updateParticles(dt) {
-    if (Math.random() < dt * 7) ember(34, 52);
-    if (Math.random() < dt * 7) ember(286, 52);
+    if (mode !== "hub" && venue === "pit") {
+      if (Math.random() < dt * 7) ember(34, 52);
+      if (Math.random() < dt * 7) ember(286, 52);
+    }
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.life -= dt;
@@ -1327,7 +1740,16 @@
       player.y = 112 + Math.cos(time * 0.4) * 5;
       return;
     }
-    if (mode === "paused" || mode === "dead" || mode === "free") return;
+    if (mode === "paused" || mode === "dead" || mode === "free" || mode === "champion" || mode === "codex") return;
+
+    if (mode === "hub") {
+      if (bannerT > 0) {
+        bannerT -= dt;
+        if (bannerT <= 0) hideBanner();
+      }
+      updateHub(gather(), dt);
+      return;
+    }
 
     if (mode === "downed") {
       downT -= dt;
@@ -1445,7 +1867,7 @@
     const flip = Math.cos(isPlayer ? player.facing : ent.facing) < 0 && !(ph && ph.tag === "spin");
     const dead = isPlayer ? !player.alive : ent.alive === false;
     const scale = 2;
-    const frame = sprite === "hound" ? (Math.floor(time * 8) % 2) : 0;
+    const frame = (sprite === "hound" || sprite === "lion") ? (Math.floor(time * 8) % 2) : 0;
     let tint = null;
     if (!isPlayer && ent.enraged) tint = "rgba(255,50,30,0.38)";
     if (!isPlayer && ph && ph.tag === "roar") tint = "rgba(255,40,20,0.55)";
@@ -1466,8 +1888,14 @@
 
     drawShadow(g, hx, isPlayer ? player.y : ent.y, ent.r + 4);
 
+    if (isPlayer && player.look && player.look.cape) {
+      g.fillStyle = player.look.cape;
+      g.fillRect(Math.round(hx) - 7, Math.round(originY) - 22, 4, 12);
+      g.fillRect(Math.round(hx) + 3, Math.round(originY) - 20, 4, 10);
+    }
+
     const weapon = isPlayer
-      ? { len: 18, thick: 1, color: "#e4e7ee", edge: "#2a3038" }
+      ? (player.weaponLook || { len: 18, thick: 1, color: "#e4e7ee", edge: "#2a3038" })
       : ent.weapon;
     const ang = weaponAngleFor(isPlayer ? player : ent, isPlayer, ph);
 
@@ -1482,6 +1910,10 @@
       g.translate(-Math.round(hx), -Math.round(originY));
     }
     window.GS_SPRITES.draw(g, sprite, hx, originY, { scale, flip, flash, tint, frame });
+    if (isPlayer && player.look && player.look.helm) {
+      g.fillStyle = player.look.helm;
+      g.fillRect(Math.round(hx) - 4, Math.round(originY) - 32, 8, 2);
+    }
     g.restore();
 
     if (weapon && !(ph && ph.cock)) {
@@ -1563,7 +1995,72 @@
     g.restore();
   }
 
+  function drawWoodStands(g) {
+    g.fillStyle = "#6a4a28";
+    g.fillRect(0, 0, W, 34);
+    g.fillStyle = "#c46a3a";
+    g.fillRect(0, 0, W, 8);
+    crowd.forEach((c) => {
+      const bob = Math.sin(time * 2.2 + c.ph) * 1;
+      const y = 16 - c.h + bob;
+      g.fillStyle = c.odd ? "#8a3a28" : "#3a2418";
+      g.fillRect(c.x, y, 10, c.h + 6);
+      g.fillRect(c.x + 2, y - 4, 6, 5);
+    });
+    for (let x = 0; x < W; x += 14) {
+      g.fillStyle = "#4a3018";
+      g.fillRect(x, 22, 12, 12);
+      g.fillStyle = "#2a1a10";
+      g.fillRect(x, 32, 12, 3);
+    }
+    g.fillStyle = "#e8c070";
+    for (let x = 8; x < W; x += 36) g.fillRect(x, 6, 16, 3);
+  }
+
+  function drawMarbleStands(g) {
+    const finals = venue === "finals";
+    g.fillStyle = finals ? "#2a1218" : "#6a4030";
+    g.fillRect(0, 0, W, 10);
+    g.fillStyle = finals ? "#1a1014" : "#d8cbb8";
+    g.fillRect(0, 10, W, 26);
+    crowd.forEach((c) => {
+      const hype = shake > 0.35 || (enemy && !enemy.alive);
+      const raise = Math.sin(time * 3 + c.ph * 1.7) > (hype ? 0.05 : 0.72);
+      const bob = Math.sin(time * 2.4 + c.ph) * 1;
+      const y = 18 - c.h + bob;
+      g.fillStyle = c.odd ? "#6a3038" : "#2a2430";
+      g.fillRect(c.x, y, 9, c.h + 5);
+      g.fillRect(c.x + 2, y - 4, 5, 4);
+      if (raise) g.fillRect(c.x + 8, y - 7, 2, 6);
+    });
+    g.fillStyle = "#8a8078";
+    g.fillRect(0, 32, W, 4);
+    g.fillStyle = finals ? "#e8c070" : "#f0e2c8";
+    g.fillRect(0, 32, W, 1);
+    g.fillStyle = finals && shake > 0.35 ? "#fff1c4" : "#6a5438";
+    g.fillRect(132, 4, 56, 16);
+    g.fillStyle = "#e8c070";
+    g.fillRect(148, 8, 8, 6);
+    g.fillStyle = "#7a1618";
+    g.fillRect(160, 8, 8, 6);
+    g.fillStyle = "#1a100c";
+    g.fillRect(132, 18, 56, 2);
+  }
+
+  function drawBanners(g) {
+    const colors = venue === "provincial" ? ["#7a1618", "#e8c070", "#3a2418"] : ["#7a1618", "#e8c070", "#f6f1e6"];
+    for (let i = 0; i < 5; i++) {
+      const x = 24 + i * 64;
+      g.fillStyle = colors[i % colors.length];
+      g.fillRect(x, 38, 10, 16 + (i % 2) * 4);
+      g.fillStyle = "#3a2418";
+      g.fillRect(x, 38, 10, 2);
+    }
+  }
+
   function drawStands(g) {
+    if (venue === "provincial") { drawWoodStands(g); return; }
+    if (venue === "colosseum" || venue === "finals") { drawMarbleStands(g); return; }
     g.fillStyle = "#100c0b";
     g.fillRect(0, 0, W, 36);
     crowd.forEach((c) => {
@@ -1635,7 +2132,8 @@
   function drawLightingFast(g) {
     lightCtx.clearRect(0, 0, W, H);
     lightCtx.globalCompositeOperation = "source-over";
-    lightCtx.fillStyle = "rgba(6,3,4,0.58)";
+    const night = venue === "pit" ? 0.58 : venue === "finals" ? 0.4 : venue === "colosseum" ? 0.2 : 0.1;
+    lightCtx.fillStyle = "rgba(6,3,4," + night + ")";
     lightCtx.fillRect(0, 0, W, H);
     lightCtx.globalCompositeOperation = "destination-out";
     const lights = [
@@ -1643,7 +2141,9 @@
       { x: 284, y: 58, r: 76 + Math.sin(time * 9 + 1) * 4 },
       { x: player.x, y: player.y - 6, r: 60 },
     ];
-    if (enemy && enemy.alive) lights.push({ x: enemy.x, y: enemy.y, r: enemy.kind === "boss" ? 48 : 28 });
+    livingFoes().forEach((e) => {
+      lights.push({ x: e.x, y: e.y, r: (e.kind === "boss" || e.kind === "aelia" || e.kind === "varro") ? 48 : 28 });
+    });
     if (gateOpen) lights.push({ x: 160, y: 170, r: 74 });
     lights.forEach((L) => {
       const rad = lightCtx.createRadialGradient(L.x, L.y, 4, L.x, L.y, L.r);
@@ -1670,20 +2170,112 @@
     g.restore();
   }
 
+  function drawHubScene(g) {
+    const rich = run ? window.GS_CAREER.richness(run) : { villa: 0, fame: 0, banners: false, marble: false, crowd: false, gold: false };
+    const sky = rich.gold ? "#6a3828" : rich.marble ? "#5a3428" : rich.banners ? "#3a241c" : "#161014";
+    g.fillStyle = sky;
+    g.fillRect(0, 0, W, 70);
+    g.fillStyle = rich.marble ? "#c4b39a" : "#2a211c";
+    g.fillRect(0, 58, W, 8);
+    g.fillStyle = "#5a4634";
+    g.fillRect(0, 66, W, H - 66);
+    for (let i = 0; i < 18; i++) {
+      g.fillStyle = i % 2 ? "#4a3828" : "#6a5040";
+      g.fillRect(i * 18, 150, 16, 6);
+    }
+    if (rich.crowd) {
+      for (let i = 0; i < 8; i++) {
+        g.fillStyle = i % 2 ? "#1a1214" : "#3a2428";
+        g.fillRect(8 + i * 18, 48, 8, 12);
+      }
+    }
+    if (!rich.banners) {
+      drawTorch(g, 20, 62);
+      drawTorch(g, 300, 62);
+    } else {
+      g.fillStyle = "#f0c070";
+      g.fillRect(8, 8, 10, 10);
+      g.fillStyle = "#fff6d8";
+      g.fillRect(11, 11, 4, 4);
+    }
+    window.GS_CAREER.STATIONS.forEach((s) => {
+      const here = hubSheet === s.id;
+      let wall = "#3a2a22";
+      let roof = "#6a2418";
+      if (s.id === "home") {
+        wall = ["#3a2a22", "#6a5344", "#c4b39a", "#e8d8b0"][rich.villa] || "#3a2a22";
+        roof = rich.gold ? "#e8c070" : "#7a3030";
+      } else if (s.id === "gate") {
+        wall = "#1a120e";
+        roof = "#e8c070";
+      } else if (s.id === "heal") roof = "#f6f1e6";
+      else if (s.id === "smith") roof = "#4a4038";
+      g.fillStyle = roof;
+      g.fillRect(s.x, s.y, s.w, 8);
+      g.fillStyle = here ? "#e8c070" : wall;
+      g.fillRect(s.x + 2, s.y + 8, s.w - 4, s.h - 8);
+      g.fillStyle = "#140c0a";
+      g.fillRect(s.x + Math.floor(s.w / 2) - 4, s.y + s.h - 12, 8, 12);
+      if (s.id === "home" && rich.villa >= 2) {
+        g.fillStyle = "#8ec8e8";
+        const bob = Math.sin(time * 4) * 1;
+        g.fillRect(s.x + s.w - 14, s.y + 16 + bob, 6, 3);
+        g.fillStyle = rich.gold ? "#e8c070" : "#d8cbb8";
+        g.fillRect(s.x + 4, s.y - 8, 3, 10);
+        g.fillRect(s.x + s.w - 8, s.y - 8, 3, 10);
+      }
+      if (rich.banners && s.id === "gate") {
+        g.fillStyle = "#7a1618";
+        g.fillRect(s.x - 6, s.y, 4, 14);
+        g.fillStyle = "#e8c070";
+        g.fillRect(s.x + s.w + 2, s.y, 4, 14);
+      }
+    });
+    if (player) drawActor(g, player, "player", true);
+    window.GS_CAREER.STATIONS.forEach((s) => {
+      const here = hubSheet === s.id;
+      const below = s.y > 90;
+      drawText(g, s.label, s.x + s.w / 2, below ? s.y - 8 : s.y + s.h + 2, here ? "#ffe29a" : "#f6f1e6", 1);
+    });
+  }
+
+  function drawingHub() {
+    return mode === "hub" || (mode === "paused" && pausedFrom === "hub");
+  }
+
   function drawWorld(g) {
+    if (drawingHub()) {
+      drawHubScene(g);
+      return;
+    }
     g.drawImage(floorCanvas, 0, 0);
+    if (venue === "provincial") {
+      g.fillStyle = "rgba(255, 210, 140, 0.1)";
+      g.fillRect(0, 0, W, H);
+    } else if (venue === "colosseum") {
+      g.fillStyle = "rgba(255, 140, 70, 0.07)";
+      g.fillRect(0, 0, W, H);
+    } else if (venue === "finals") {
+      g.fillStyle = "rgba(40, 0, 16, 0.16)";
+      g.fillRect(0, 0, W, H);
+    }
     decals.forEach((d) => {
       g.fillStyle = d.color;
       g.fillRect(Math.round(d.x), Math.round(d.y), d.s, d.s);
     });
-    if (enemy) drawTelegraph(g, enemy);
+    livingFoes().forEach((e) => drawTelegraph(g, e));
+    if (enemy && !enemy.alive) drawTelegraph(g, enemy);
     drawStands(g);
-    drawTorch(g, 36, 48);
-    drawTorch(g, 284, 48);
-    drawGate(g);
+    if (venue === "pit") {
+      drawTorch(g, 36, 48);
+      drawTorch(g, 284, 48);
+      drawGate(g);
+    } else drawBanners(g);
 
     const actors = [{ y: player.y, draw: () => drawActor(g, player, "player", true) }];
+    corpses.forEach((c) => actors.push({ y: c.y, draw: () => drawActor(g, c, c.sprite, false) }));
     if (enemy) actors.push({ y: enemy.y, draw: () => drawActor(g, enemy, enemy.sprite, false) });
+    if (partner) actors.push({ y: partner.y, draw: () => drawActor(g, partner, partner.sprite, false) });
     actors.sort((a, b) => a.y - b.y);
     actors.forEach((a) => a.draw());
 
@@ -1696,39 +2288,38 @@
 
     drawLightingFast(g);
 
-    if (enemy && enemy.alive) {
-      const ph = currentPhase(enemy);
-      if (ph && ph.telegraph && ph.tag === "windup" && ph.flare && (ph.t - enemy.phaseT) <= ph.flare) {
-        g.save();
-        g.globalAlpha = 0.95;
-        g.strokeStyle = Math.sin(time * 42) > 0 ? "#ffffff" : ph.telegraph.color;
-        g.lineWidth = 1;
-        const tel = ph.telegraph;
-        if (tel.shape === "cone") {
-          g.beginPath();
-          g.arc(enemy.x, enemy.y, tel.range, enemy.facing - tel.arc / 2, enemy.facing + tel.arc / 2);
-          g.stroke();
-        } else if (tel.shape === "circle") {
-          g.beginPath();
-          g.arc(enemy.x, enemy.y, tel.range, 0, Math.PI * 2);
-          g.stroke();
-        } else if (tel.shape === "lane") {
-          g.translate(enemy.x, enemy.y);
-          g.rotate(enemy.facing);
-          g.strokeRect(0, -tel.width / 2, tel.length, tel.width);
-        }
-        g.restore();
-      }
-      const barW = enemy.kind === "boss" ? 36 : 20;
-      const bx = Math.round(enemy.x - barW / 2);
-      const by = Math.round(enemy.y + 3);
+    livingFoes().forEach((foe) => {
+      const ph = currentPhase(foe);
+      const barW = (foe.kind === "boss" || foe.kind === "aelia" || foe.kind === "varro") ? 36 : 20;
+      const bx = Math.round(foe.x - barW / 2);
+      const by = Math.round(foe.y + 3);
       g.fillStyle = "#140c0a";
       g.fillRect(bx - 1, by - 1, barW + 2, 5);
       g.fillStyle = "#3a1814";
       g.fillRect(bx, by, barW, 3);
-      g.fillStyle = enemy.kind === "boss" ? "#e8c070" : "#d23a34";
-      g.fillRect(bx, by, Math.max(0, Math.round(barW * (enemy.hp / enemy.hpMax))), 3);
-    }
+      g.fillStyle = (foe.kind === "boss" || foe.kind === "aelia") ? "#e8c070" : "#d23a34";
+      g.fillRect(bx, by, Math.max(0, Math.round(barW * (foe.hp / foe.hpMax))), 3);
+      if (!(ph && ph.telegraph && ph.tag === "windup" && ph.flare && (ph.t - foe.phaseT) <= ph.flare)) return;
+      g.save();
+      g.globalAlpha = 0.95;
+      g.strokeStyle = Math.sin(time * 42) > 0 ? "#ffffff" : ph.telegraph.color;
+      g.lineWidth = 1;
+      const tel = ph.telegraph;
+      if (tel.shape === "cone") {
+        g.beginPath();
+        g.arc(foe.x, foe.y, tel.range, foe.facing - tel.arc / 2, foe.facing + tel.arc / 2);
+        g.stroke();
+      } else if (tel.shape === "circle") {
+        g.beginPath();
+        g.arc(foe.x, foe.y, tel.range, 0, Math.PI * 2);
+        g.stroke();
+      } else if (tel.shape === "lane") {
+        g.translate(foe.x, foe.y);
+        g.rotate(foe.facing);
+        g.strokeRect(0, -tel.width / 2, tel.length, tel.width);
+      }
+      g.restore();
+    });
 
     numbers.forEach((n) => {
       g.globalAlpha = Math.max(0, n.life / 0.75);
@@ -1771,6 +2362,7 @@
     app.dataset.fight = String(fightIndex + 1);
     app.dataset.hp = String(Math.ceil(player.hp));
     app.dataset.stam = String(Math.ceil(player.stam));
+    app.dataset.act = String(act);
     app.dataset.ehp = enemy && enemy.alive ? String(Math.ceil(enemy.hp)) : "0";
     app.dataset.pattern = enemy && enemy.pattern ? enemy.pattern.id : "";
     app.dataset.lesson = lessonId() || "";
@@ -1782,12 +2374,13 @@
     $("hp-bar").setAttribute("aria-valuemax", String(player.hpMax));
     $("st-bar").setAttribute("aria-valuenow", String(Math.ceil(player.stam)));
     $("st-bar").classList.toggle("low", stP < 0.22 && mode === "fight");
-    const f = FIGHTS[fightIndex] || FIGHTS[0];
-    $("fight-name").textContent = f.kicker + " — " + f.title;
+    const f = currentCard();
+    if (mode === "hub" && run) $("fight-name").textContent = window.GS_CAREER.fameTitle(run.fame) + " — " + run.name;
+    else $("fight-name").textContent = f.kicker + " — " + f.title;
     const pips = $("pips").children;
     for (let i = 0; i < pips.length; i++) {
-      pips[i].classList.toggle("now", i === fightIndex && mode !== "free");
-      pips[i].classList.toggle("done", i < fightIndex || (mode === "free" && i <= fightIndex));
+      pips[i].classList.toggle("now", act === 1 && i === fightIndex && mode !== "free" && mode !== "hub");
+      pips[i].classList.toggle("done", act === 1 && (i < fightIndex || (mode === "free" && i <= fightIndex)));
     }
   }
 
@@ -1869,17 +2462,24 @@
         return;
       }
       key[e.code] = true;
-      if (e.code === "Space" && (mode === "title" || mode === "dead" || mode === "free")) {
+      if (e.code === "Space" && (mode === "title" || mode === "dead" || mode === "free" || mode === "champion")) {
         prevDodge = true;
         startRun();
         return;
+      }
+      if (e.code === "KeyE" && mode === "hub") {
+        const st = window.GS_CAREER.stationAt(player.x, player.y, 18);
+        if (st) {
+          hubSheet = st.id;
+          refreshHub();
+        }
       }
       if (e.code === "Escape") {
         if (mode === "paused") resume();
         else pause();
       } else if (e.code === "Enter") {
         if (e.target && e.target.tagName === "BUTTON") return;
-        if (mode === "title" || mode === "dead" || mode === "free") startRun();
+        if (mode === "title" || mode === "dead" || mode === "free" || mode === "champion") startRun();
         else if (mode === "paused") resume();
       } else if (e.code === "KeyP") {
         if (mode === "paused") resume();
@@ -1904,6 +2504,14 @@
     screen.addEventListener("mousedown", (e) => {
       if (e.button === 0) mouse.left = true;
       if (e.button === 2) { mouse.right = true; e.preventDefault(); }
+    });
+    screen.addEventListener("pointerdown", (e) => {
+      if (mode !== "hub") return;
+      const p = toWorld(e.clientX, e.clientY);
+      const st = window.GS_CAREER.stationAt(p.x, p.y, 2);
+      if (!st) return;
+      hubSheet = st.id;
+      refreshHub();
     });
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) mouse.left = false;
@@ -1960,6 +2568,23 @@
     $("btn-dead-title").addEventListener("click", () => { sfx("ui"); bootTitle(); });
     $("btn-free-title").addEventListener("click", () => { sfx("ui"); bootTitle(); });
     $("btn-pause").addEventListener("click", () => { sfx("ui"); pause(); });
+    $("hub-dock").addEventListener("click", onHubClick);
+    $("btn-hall").addEventListener("click", () => { sfx("ui"); openCodex("hall"); });
+    $("btn-legend").addEventListener("click", () => { sfx("ui"); openCodex("legend"); });
+    $("btn-hall-back").addEventListener("click", () => { sfx("ui"); bootTitle(); });
+    $("btn-legend-back").addEventListener("click", () => { sfx("ui"); bootTitle(); });
+    $("btn-dead-hall").addEventListener("click", () => { sfx("ui"); openCodex("hall"); });
+    $("btn-champ-again").addEventListener("click", () => { sfx("ui"); startRun(); });
+    $("btn-champ-title").addEventListener("click", () => { sfx("ui"); bootTitle(); });
+    $("legend-body").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-act='unlock']");
+      if (!b) return;
+      const res = window.GS_CAREER.buyUnlock(meta, b.dataset.arg);
+      meta = window.GS_CAREER.load();
+      window.GS_CAREER.paintLegend($("legend-body"), meta);
+      sfx(res.ok ? "ui" : "empty");
+      announce(res.msg || "");
+    });
     const toggleMute = () => setMuted(!muted);
     $("btn-mute").addEventListener("click", toggleMute);
     $("btn-mute-title").addEventListener("click", toggleMute);
@@ -1989,5 +2614,4 @@
   layout();
   last = performance.now();
   requestAnimationFrame(frame);
-
 })();

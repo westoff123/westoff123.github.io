@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#140c0a">
-<meta name="description" content="Gladiator Secret — Act I. A top-down pit fight. Three lessons, then the Pit Boss.">
+<meta name="description" content="Gladiator Secret. A pit fight, then a career in the sand, if you live.">
 <title>Gladiator Secret</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect fill='%23140c0a' width='16' height='16'/%3E%3Cpath fill='%23e8c070' d='M7 1h2v6h3v2H10v6H6V9H4V7h3z'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -41,6 +41,8 @@
     </div>
   </div>
 
+  <div id="hub-dock" hidden></div>
+
   <div id="touch" class="touch-controls" hidden>
     <div id="joy" class="joy" aria-label="Move joystick"><div id="knob" class="knob"></div></div>
     <div class="buttons">
@@ -52,11 +54,14 @@
 
   <div id="overlay">
     <section class="panel" id="panel-title">
-      <p class="eyebrow">Act I · The Pit</p>
+      <p class="eyebrow">The pit, then the city</p>
       <h1>Gladiator<br>Secret</h1>
-      <p class="lede">A prisoner. Three fights. Then the gate.</p>
+      <p class="lede">A prisoner. Three fights. If the gate opens, the city starts charging rent.</p>
+      <p class="controls-line" id="title-legend"></p>
       <p class="controls-line" id="title-controls"></p>
       <button type="button" class="primary" id="btn-start">Enter the pit</button>
+      <button type="button" class="secondary" id="btn-hall">Hall of Legends</button>
+      <button type="button" class="secondary" id="btn-legend">Spend Legend</button>
       <button type="button" class="secondary" id="btn-mute-title">SFX on</button>
     </section>
 
@@ -71,9 +76,10 @@
     <section class="panel" id="panel-dead" hidden>
       <p class="eyebrow">Game over</p>
       <h2>Cut down</h2>
-      <p>The pit keeps what it kills. This run is over. You go back to the first fight with nothing carried over.</p>
+      <p id="dead-blurb">The sand keeps the body. The yard keeps the name. The next prisoner starts at the first fight.</p>
       <div class="stats" id="dead-stats"></div>
       <button type="button" class="primary" id="btn-again">From the first fight</button>
+      <button type="button" class="secondary" id="btn-dead-hall">Hall</button>
       <button type="button" class="secondary" id="btn-dead-title">Title</button>
     </section>
 
@@ -86,10 +92,30 @@
       <button type="button" class="primary" id="btn-free-again">Fight the pit again</button>
       <button type="button" class="secondary" id="btn-free-title">Title</button>
     </section>
+
+    <section class="panel" id="panel-champion" hidden>
+      <p class="eyebrow">The card is finished</p>
+      <h2>Champion of Rome</h2>
+      <p id="champ-name"></p>
+      <p id="champ-copy"></p>
+      <button type="button" class="primary" id="btn-champ-again">A new prisoner</button>
+      <button type="button" class="secondary" id="btn-champ-title">Title</button>
+    </section>
+
+    <section class="panel" id="panel-hall" hidden>
+      <div id="hall-body"></div>
+      <button type="button" class="secondary" id="btn-hall-back">Back</button>
+    </section>
+
+    <section class="panel" id="panel-legend" hidden>
+      <div id="legend-body"></div>
+      <button type="button" class="secondary" id="btn-legend-back">Back</button>
+    </section>
   </div>
 </div>
 <div id="sr" class="sr-only" aria-live="polite"></div>
 <script src="sprites.js"></script>
+<script src="career.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

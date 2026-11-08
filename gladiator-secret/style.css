@@ -81,6 +81,8 @@ body.touch canvas { cursor: default; }
   gap: 4px 8px;
 }
 
+#app[data-act="2"] .pips { display: none; }
+
 #app[data-mode="title"] #hud,
 #app[data-mode="dead"] #hud,
 #app[data-mode="free"] #hud,
@@ -296,7 +298,9 @@ body.touch #banner {
 #overlay[hidden] { display: none !important; }
 
 .panel {
-  width: min(460px, 100%);
+  width: min(520px, 100%);
+  max-height: min(92dvh, 760px);
+  overflow: auto;
   background: var(--panel);
   border: 3px solid #6a5344;
   box-shadow: 8px 8px 0 #000;
@@ -363,6 +367,88 @@ button.primary:active, button.secondary:active { transform: translate(2px, 2px);
 }
 
 .stats b { color: var(--ink); display: block; font-size: 16px; }
+
+#hub-dock {
+  background: #120e0c;
+  border-top: 2px solid #6a5344;
+  padding: 8px 10px 10px;
+  max-height: 46vh;
+  overflow: auto;
+  z-index: 5;
+}
+
+#hub-dock[hidden] { display: none !important; }
+
+.hub-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.hub-top b {
+  color: var(--ink);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hub-note, .hub-stats, .hub-sheet p {
+  margin: 6px 0;
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.hub-row, .hub-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.hub-line { margin: 6px 0; justify-content: space-between; }
+.hub-line span { flex: 1; min-width: 180px; text-align: left; color: var(--ink); font-size: 12px; line-height: 1.35; }
+
+.hub-btn, #legend-body button, #hall-body button {
+  background: #2a211c;
+  color: var(--ink);
+  border: 2px solid #6a5344;
+  padding: 6px 8px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hub-btn.primary, .hub-btn.is-on { background: var(--blood); color: #1a0c08; border-color: #140c0a; }
+.hub-btn:disabled { opacity: 0.45; cursor: default; }
+
+.hub-sheet {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 2px solid #3a2a22;
+  text-align: left;
+}
+
+.hub-sheet h3 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.hall { list-style: none; padding: 0; margin: 8px 0; text-align: left; }
+.hall li {
+  padding: 6px 0;
+  border-bottom: 1px solid #3a2a22;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+body.hub-on .buttons { display: none; }
 
 .sr-only {
   position: absolute;
