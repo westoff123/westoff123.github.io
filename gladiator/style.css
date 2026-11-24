@@ -327,6 +327,47 @@ a.site-back:focus-visible {
   text-underline-offset: 3px;
 }
 
+.panel-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0 0 12px;
+}
+
+.panel-nav .site-back {
+  display: inline;
+  margin: 0;
+}
+
+a.site-feedback {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  margin-left: auto;
+  padding: 4px 0;
+  color: var(--dim);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.feedback-row {
+  margin: 12px 0 0;
+}
+
+.feedback-row a.site-feedback {
+  margin-left: 0;
+}
+
+a.site-feedback:hover,
+a.site-feedback:focus-visible {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: var(--gold);
