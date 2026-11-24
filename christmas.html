@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0f1c">
+<title>Easton's Christmas List</title>
+<style>
+  :root{--bg:#0a0f1c;--card:#121a2c;--line:#24324f;--txt:#eef3ff;--muted:#93a3c6;--a:#22d3ee;--b:#a3e635;--gold:#e7c27a;--berry:#e7a0a8;color-scheme:dark}
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:
+    radial-gradient(820px 420px at 100% -120px,rgba(231,194,122,.16),transparent 60%),
+    radial-gradient(1100px 600px at 20% -220px,#1d2f55,var(--bg));
+    color:var(--txt);min-height:100vh}
+  .way{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(10,15,28,.82);position:sticky;top:0;z-index:5;backdrop-filter:blur(12px)}
+  .way a.front{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}
+  .way a.front:hover{color:var(--a)}
+  .pills{display:flex;gap:6px;flex-wrap:wrap}
+  .pills a{text-decoration:none;font-size:13px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:6px 11px;border-radius:999px}
+  .pills a:hover{border-color:var(--a);color:var(--txt)}
+  .pills a[aria-current="page"]{color:#0a0f1c;background:linear-gradient(90deg,var(--gold),var(--a));border-color:transparent}
+  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+  header{max-width:880px;margin:0 auto;padding:42px 20px 8px}
+  .badge{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(231,194,122,.55);padding:5px 10px;border-radius:999px}
+  h1{margin:14px 0 0;font-size:clamp(36px,7vw,60px);letter-spacing:-1.4px;line-height:1.02;background:linear-gradient(90deg,var(--gold),var(--a));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin:14px 0 0;font-size:18px;max-width:40rem;line-height:1.45}
+  .jump{display:inline-flex;align-items:center;margin-top:18px;color:#0a0f1c;background:linear-gradient(90deg,var(--a),var(--b));text-decoration:none;font-weight:800;font-size:14px;padding:10px 14px;border-radius:999px}
+  .jump:hover{filter:brightness(1.05)}
+  main{max-width:880px;margin:0 auto;padding:12px 20px 20px}
+  section{padding-top:18px}
+  #request{scroll-margin-top:76px;margin-top:34px}
+  h2{margin:8px 0 6px;font-size:clamp(24px,4vw,32px);letter-spacing:-.4px}
+  .section-copy{color:var(--muted);margin:0 0 16px;line-height:1.5}
+  .gifts{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .gift,.soon,.form-card,.confirm{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+  .gift{border-top:3px solid rgba(231,194,122,.7)}
+  .gift h3{margin:0 0 8px;font-size:20px}
+  .gift p{margin:0}
+  .price{display:inline-block;color:var(--b);font-weight:800;font-size:13px;border:1px solid rgba(163,230,53,.45);border-radius:999px;padding:3px 8px}
+  .gift .note{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.45}
+  .gift a{display:inline-block;margin-top:12px;color:var(--a);font-weight:700;text-decoration:none}
+  .gift a:hover{text-decoration:underline}
+  .soon{border-style:dashed;border-color:rgba(231,194,122,.45);text-align:left}
+  .soon .mark{font-size:36px;line-height:1}
+  .soon h3{margin:10px 0 6px;font-size:22px}
+  .soon p{margin:0;color:var(--muted);line-height:1.5}
+  .form-card{display:grid;gap:14px}
+  .split{display:grid;gap:14px}
+  @media(min-width:680px){.split{grid-template-columns:1fr 1fr}}
+  label{display:block;font-size:13px;font-weight:700}
+  .tag{font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;margin-left:6px;color:var(--muted)}
+  .tag.req{color:var(--berry)}
+  .hint{display:block;margin-top:6px;color:var(--muted);font-size:13px;font-weight:500}
+  input,textarea{width:100%;margin-top:8px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0c1426;color:var(--txt);font:inherit;font-size:16px}
+  textarea{resize:vertical;min-height:96px}
+  input:user-invalid,textarea:user-invalid{border-color:#f87171}
+  input:-webkit-autofill,textarea:-webkit-autofill{-webkit-text-fill-color:var(--txt);box-shadow:0 0 0 1000px #0c1426 inset}
+  .hp{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  button.send,button.ghost{font:inherit;font-weight:800;border-radius:999px;padding:14px 18px;min-height:48px;cursor:pointer}
+  button.send{border:0;color:#0a0f1c;background:linear-gradient(90deg,var(--a),var(--b));font-size:16px}
+  button.send:disabled{opacity:.55;cursor:progress}
+  button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  button.ghost:hover{border-color:var(--a)}
+  .banner{border-radius:14px;padding:14px 16px;font-size:14px;line-height:1.45}
+  .banner.error{background:#2a1520;border:1px solid #7f1d1d;color:#fecaca}
+  .confirm{text-align:left}
+  .confirm h3{margin:8px 0;font-size:26px}
+  .confirm p{margin:0 0 16px;color:var(--muted);line-height:1.5}
+  .confirm .mark{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:50%;background:rgba(163,230,53,.15);color:var(--b);font-weight:900}
+  .back-list{display:inline-block;margin-top:8px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
+  .back-list:hover{color:var(--a)}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:36px 20px 48px}
+  @media(prefers-reduced-motion:reduce){.jump,button{transition:none}}
+</style>
+</head>
+<body>
+<nav class="way" aria-label="Site">
+  <a class="front" href="./">← What are you here for?</a>
+  <div class="pills">
+    <a href="games.html">Pleasure / games</a>
+    <a href="christmas.html" aria-current="page">Christmas list</a>
+  </div>
+</nav>
+
+<header>
+  <span class="badge">✦ Christmas</span>
+  <h1>Easton's Christmas List</h1>
+  <p>The wishes are still on their way. Friends and family can request something from Easton in the meantime.</p>
+  <a class="jump" href="#request">Request something from Easton</a>
+</header>
+
+<main>
+  <section id="list" aria-labelledby="list-heading">
+    <h2 id="list-heading" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">The list</h2>
+    <div id="list-root" class="gifts"></div>
+    <div id="coming-soon" class="soon">
+      <div class="mark" aria-hidden="true">🎁</div>
+      <h3>The list is on its way</h3>
+      <p>Easton hasn't sent his items yet. When he does, each one will show up here with a name, a price or note, and a link.</p>
+    </div>
+  </section>
+
+  <section id="request" aria-labelledby="request-heading">
+    <h2 id="request-heading">Request Something From Easton</h2>
+    <p class="section-copy">Want a drawing, a favor, or something specific? Send it from this page. Email is optional, in case you want a reply.</p>
+
+    <div id="confirm" class="confirm" hidden>
+      <div class="mark" aria-hidden="true">✓</div>
+      <h3>Request sent</h3>
+      <p id="confirm-text"></p>
+      <button type="button" class="ghost" id="another">Send another request</button>
+    </div>
+
+    <form id="request-form" class="form-card" novalidate>
+      <div class="hp" aria-hidden="true">
+        <label>Leave this field blank<input type="text" name="_honey" tabindex="-1" autocomplete="off" value=""></label>
+      </div>
+      <input type="hidden" name="_subject" value="New request from Easton's website">
+      <input type="hidden" name="_template" value="table">
+
+      <div class="split">
+        <div>
+          <label for="req-name">Name <span class="tag req">Required</span></label>
+          <input id="req-name" name="name" type="text" autocomplete="name" required maxlength="120">
+        </div>
+        <div>
+          <label for="req-email">Email <span class="tag">Optional</span></label>
+          <input id="req-email" name="email" type="email" autocomplete="email" maxlength="200" inputmode="email">
+          <span class="hint">Only if you want Easton to be able to reply.</span>
+        </div>
+      </div>
+
+      <div>
+        <label for="req-what">What are you requesting? <span class="tag req">Required</span></label>
+        <textarea id="req-what" name="request" required maxlength="2000" rows="4" placeholder="A book, a drawing, a favor, a specific gift…"></textarea>
+      </div>
+
+      <div>
+        <label for="req-link">Link <span class="tag">Optional</span></label>
+        <input id="req-link" name="link" type="url" maxlength="500" placeholder="https://" inputmode="url">
+      </div>
+
+      <div>
+        <label for="req-notes">Notes / details <span class="tag">Optional</span></label>
+        <textarea id="req-notes" name="notes" maxlength="2000" rows="3" placeholder="Size, color, context…"></textarea>
+      </div>
+
+      <div id="form-error" class="banner error" hidden role="alert"></div>
+      <button type="submit" class="send" id="send">Send request</button>
+      <p id="live" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)" aria-live="polite"></p>
+    </form>
+    <a class="back-list" href="#list">↑ Back to the list</a>
+    <noscript><p class="banner error" style="margin-top:14px">Sending a request needs JavaScript enabled.</p></noscript>
+  </section>
+</main>
+
+<template id="gift-card">
+  <article class="gift">
+    <h3 class="gift-name"></h3>
+    <p class="gift-price price" hidden></p>
+    <p class="gift-note note" hidden></p>
+    <a class="gift-link" hidden target="_blank" rel="noopener noreferrer">See it</a>
+  </article>
+</template>
+
+<footer>Made by Easton · 2026</footer>
+
+<script>
+// Swap FORMSUBMIT_ENDPOINT for a masked FormSubmit hash later, for example:
+// "https://formsubmit.co/ajax/yourRandomHash"
+var FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax/erenyart@gmail.com";
+
+// Easton's Christmas list.
+// Add a real item by putting an object in this array. name is the only
+// required field. price, note, and link are optional.
+//
+// {
+//   name: "Wool socks",
+//   price: "$18",
+//   note: "Size L, dark colors",
+//   link: "https://example.com/socks"
+// }
+var CHRISTMAS_LIST = [];
+
+(function () {
+  var listRoot = document.getElementById("list-root");
+  var comingSoon = document.getElementById("coming-soon");
+  var template = document.getElementById("gift-card");
+  var form = document.getElementById("request-form");
+  var sendBtn = document.getElementById("send");
+  var errorEl = document.getElementById("form-error");
+  var confirmEl = document.getElementById("confirm");
+  var confirmText = document.getElementById("confirm-text");
+  var anotherBtn = document.getElementById("another");
+  var live = document.getElementById("live");
+  var sending = false;
+
+  function safeUrl(value) {
+    try {
+      var url = new URL(value, window.location.href);
+      if (url.protocol === "http:" || url.protocol === "https:") return url.href;
+    } catch (err) {}
+    return "";
+  }
+
+  function renderList() {
+    var items = CHRISTMAS_LIST.filter(function (item) {
+      return item && String(item.name || "").trim();
+    });
+    listRoot.replaceChildren();
+    if (!items.length) {
+      comingSoon.hidden = false;
+      return;
+    }
+    comingSoon.hidden = true;
+    items.forEach(function (item) {
+      var node = template.content.cloneNode(true);
+      var card = node.querySelector(".gift");
+      card.querySelector(".gift-name").textContent = String(item.name).trim();
+      var price = card.querySelector(".gift-price");
+      var note = card.querySelector(".gift-note");
+      var link = card.querySelector(".gift-link");
+      if (item.price) {
+        price.hidden = false;
+        price.textContent = String(item.price);
+      }
+      if (item.note) {
+        note.hidden = false;
+        note.textContent = String(item.note);
+      }
+      var href = item.link ? safeUrl(String(item.link)) : "";
+      if (href) {
+        link.hidden = false;
+        link.href = href;
+      }
+      listRoot.appendChild(node);
+    });
+  }
+
+  function announce(message) {
+    live.textContent = message;
+  }
+
+  function showError(message) {
+    errorEl.hidden = false;
+    errorEl.textContent = message;
+    announce(message);
+  }
+
+  function clearError() {
+    errorEl.hidden = true;
+    errorEl.textContent = "";
+  }
+
+  function formatFormError(message) {
+    var text = String(message || "Something went wrong sending this request.");
+    if (/activat|confirm your email/i.test(text)) {
+      return "FormSubmit still needs this form activated before it can deliver requests. " + text;
+    }
+    return text;
+  }
+
+  function setSending(on) {
+    sending = on;
+    sendBtn.disabled = on;
+    sendBtn.textContent = on ? "Sending…" : "Send request";
+    sendBtn.setAttribute("aria-busy", on ? "true" : "false");
+  }
+
+  function requireTrimmed(input) {
+    var value = input.value.trim();
+    input.setCustomValidity(value ? "" : "Please fill this in.");
+    return value;
+  }
+
+  ["name", "request"].forEach(function (fieldName) {
+    form.elements[fieldName].addEventListener("input", function () {
+      this.setCustomValidity("");
+    });
+  });
+
+  function showSuccess(name, request) {
+    form.hidden = true;
+    confirmEl.hidden = false;
+    confirmText.textContent = "Thanks, " + name + ". Easton will see this: \u201c" + request + ".\u201d";
+    announce("Request sent.");
+    anotherBtn.focus();
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (sending) return;
+    clearError();
+
+    form.elements.name.value = form.elements.name.value.trim();
+    form.elements.email.value = form.elements.email.value.trim();
+    form.elements.request.value = form.elements.request.value.trim();
+    form.elements.link.value = form.elements.link.value.trim();
+    form.elements.notes.value = form.elements.notes.value.trim();
+
+    var name = requireTrimmed(form.elements.name);
+    var request = requireTrimmed(form.elements.request);
+    var email = form.elements.email.value;
+    var link = form.elements.link.value;
+    var notes = form.elements.notes.value;
+    form.elements.email.setCustomValidity("");
+    form.elements.link.setCustomValidity("");
+    if (email && !form.elements.email.checkValidity()) {
+      form.elements.email.setCustomValidity("Enter a valid email, or leave it blank.");
+    }
+    if (link && !form.elements.link.checkValidity()) {
+      form.elements.link.setCustomValidity("Enter a full link starting with https://, or leave it blank.");
+    }
+    if (!form.reportValidity()) {
+      announce("Check the required fields and try again.");
+      return;
+    }
+
+    if (form.elements._honey.value) {
+      form.elements._honey.value = "";
+      showError("That didn't go through. Please try sending it again.");
+      return;
+    }
+
+    var payload = {
+      Name: name,
+      "What are you requesting?": request,
+      _subject: form.elements._subject.value,
+      _template: form.elements._template.value,
+      _honey: ""
+    };
+    if (email) {
+      payload.Email = email;
+      payload._replyto = email;
+    }
+    if (link) payload.Link = link;
+    if (notes) payload["Notes / details"] = notes;
+
+    setSending(true);
+    announce("Sending your request.");
+
+    fetch(FORMSUBMIT_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
+    }).then(function (response) {
+      return response.json().catch(function () { return null; }).then(function (data) {
+        var message = data && (data.message || data.error) || "";
+        var successFlag = data && (data.success === true || data.success === "true");
+        var needsActivation = /activat|confirm your email/i.test(String(message));
+        if (response.ok && successFlag && !needsActivation) {
+          showSuccess(name, request);
+          return;
+        }
+        var fallback = message || ("The form service returned an error (" + response.status + ").");
+        showError(formatFormError(fallback));
+      });
+    }).catch(function () {
+      showError("Couldn't reach the form service. Check your connection and try again.");
+    }).then(function () {
+      setSending(false);
+    });
+  });
+
+  anotherBtn.addEventListener("click", function () {
+    form.reset();
+    form.hidden = false;
+    confirmEl.hidden = true;
+    clearError();
+    form.elements.name.focus();
+    announce("");
+  });
+
+  window.EastonChristmas = {
+    list: CHRISTMAS_LIST,
+    renderList: renderList,
+    endpoint: FORMSUBMIT_ENDPOINT
+  };
+
+  renderList();
+})();
+</script>
+</body>
+</html>
