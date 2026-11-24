@@ -310,6 +310,23 @@ body.touch #banner {
 
 .panel[hidden] { display: none !important; }
 
+a.site-back {
+  display: block;
+  margin: 0 0 12px;
+  text-align: left;
+  color: var(--dim);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+a.site-back:hover,
+a.site-back:focus-visible {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: var(--gold);
@@ -336,6 +353,8 @@ h1 {
   line-height: 1.45;
   margin: 8px 0 0;
 }
+
+button[hidden] { display: none !important; }
 
 button.primary, button.secondary {
   display: inline-block;
