@@ -32,7 +32,7 @@ window.EASTON_GATE_CONFIG = {
       options: [
         {
           label: "Pleasure / games",
-          detail: "Easton's Games. Still better than Brandon's.",
+          detail: "Easton's Games. One live, two still plotting.",
           emoji: "🎮",
           href: "games.html"
         },
